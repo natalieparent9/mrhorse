@@ -62,11 +62,11 @@ mvmr_horse_model = function() {
 
 #' Title
 #'
-#' @param D
-#' @param no_ini
-#' @param variable.names
-#' @param n.iter
-#' @param n.burnin
+#' @param D Dataset containing betaY, betaYse, betaX and betaXse
+#' @param no_ini Number of chains
+#' @param variable.names Parameters to save estimates for
+#' @param n.iter Number of iterations (not including warmup)
+#' @param n.burnin Number of warmup iterations
 #'
 #' @return
 #' @export
@@ -94,6 +94,18 @@ mr_horse = function(D, no_ini = 3, variable.names = "theta", n.iter = 10000, n.b
   return(list("MR_Estimate" = mr_estimate, "MR_Coda" = mr.coda))
 }
 
+#' Title
+#'
+#' @param D Dataset containing betaY, betaYse and at least betaX1, betaX1se, betaX2 and betaX2se
+#' @param no_ini Number of chains
+#' @param variable.names Parameters to save estimates for
+#' @param n.iter Number of iterations (not including warmup)
+#' @param n.burnin Number of warmup iterations
+#'
+#' @return
+#' @export
+#'
+#' @examples
 mvmr_horse = function(D, no_ini = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000){
   if("theta" %in% variable.names){
     variable.names = variable.names
