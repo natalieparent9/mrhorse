@@ -9,11 +9,22 @@ mr_horse(
   no_ini = 3,
   variable.names = "theta",
   n.iter = 10000,
-  n.burnin = 10000
+  n.burnin = 10000,
+  stan = FALSE
 )
 }
 \arguments{
-\item{n.burnin}{}
+\item{D}{Data frame or MRInput containing betaY, betaYse, betaX and betaXse}
+
+\item{no_ini}{Number of chains}
+
+\item{variable.names}{Parameters to save estimates for}
+
+\item{n.iter}{Number of iterations (not including warmup)}
+
+\item{n.burnin}{Number of warmup iterations}
+
+\item{stan}{Fit the model using stan, default is to use JAGS}
 }
 \description{
 Title

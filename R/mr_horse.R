@@ -1,7 +1,8 @@
 library(R2jags)
+library(rstan)
 library(coda)
 
-mr_horse_model = function() {
+mr_horse_model_jags = function() {
   for (i in 1:N){
     by[i] ~ dnorm(mu[i], 1/(sy[i] * sy[i]))
     mu[i] = theta * bx0[i] + alpha[i]
@@ -27,114 +28,124 @@ mr_horse_model = function() {
   theta ~ dunif(-10, 10)
 }
 
-mvmr_horse_model = function() {
-  for (i in 1:N){
-    by[i] ~ dnorm(mu[i], 1 / (sy[i] * sy[i]))
-    mu[i] = inprod(bx0[i, 1:K], theta) + alpha[i]
-    bx[i,1:K] ~ dmnorm(bx0[i,1:K], Tx[1:K, ((i-1)*K+1):(i*K)])
 
-    kappa[i] = (rho[i]^2 / (1 + K*rho[i]^2))
-    bx0[i,1:K] ~ dmnorm(mx + sx0 * rho[i] * alpha[i] / (phi[i] * tau), A - kappa[i] * B)
-    r[i] ~ dbeta(10, 10);T(, 1)
-    rho[i] = 2*r[i] -1
-    alpha[i] ~ dnorm(0, 1 / (tau * tau * phi[i] * phi[i]))
-    phi[i] = a[i] / sqrt(b[i])
-    a[i] ~ dnorm(0, 1);T(0, )
-    b[i] ~ dgamma(0.5, 0.5)
-  }
-
-  c ~ dnorm(0, 1);T(0, )
-  d ~ dgamma(0.5, 0.5)
-  tau = c / sqrt(d)
-
-  mx ~ dmnorm(rep(0, K), R[,])
-
-  for (k in 1:K){
-    vx0[k] ~ dnorm(0, 1);T(0, )
-    sx0[k] = sqrt(vx0[k])
-    theta[k] ~ dunif(-10, 10)
-    for (j in 1:K){
-      A[j, k] = ifelse(j==k, 1/vx0[j], 0)
-      B[j, k] = 1 / (sx0[j] * sx0[k])
-    }
-  }
+mr_horse_model_stan = "
+data {
+  int<lower=0> N;        // Number of observations (SNPs)
+  vector[N] by;          // Observed effect estimates on Y (beta_y)
+  vector[N] bx;          // Observed effect estimates on X (beta_x)
+  vector[N] sy;          // Standard errors for by
+  vector[N] sx;          // Standard errors for bx
 }
+
+parameters {
+  real theta;            // Causal effect
+  vector[N] alpha;       // Pleiotropic effects
+  vector[N] bx0;         // Latent effect estimates on X
+  vector<lower=0>[N] a;  // Parameter for phi[i]
+  vector<lower=0>[N] b;  // Parameter for phi[i]
+  vector<lower=0, upper=1>[N] r;  // Truncated beta distribution parameter for correlation
+  real<lower=0> c;       // Parameter for tau
+  real<lower=0> d;       // Parameter for tau
+  real<lower=0> vx0;     // Variance for bx0 distribution
+  real mx0;              // Mean for bx0 distribution
+}
+
+transformed parameters {
+  vector<lower=0>[N] phi = a ./ sqrt(b);        // Scaling factor for each SNP based on parameters a and b
+  vector[N] rho = 2 * r - 1;           // Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i].
+  vector[N] mu = theta * bx0 + alpha;  // Computes the mean effect on Y for each SNP
+  real<lower=0> tau = c / sqrt(d);              // Precision parameter
+
+}
+
+model {
+  // Priors
+  theta ~ uniform(-10, 10);                    // Uniform prior for causal effect theta
+  alpha ~ normal(0, tau * phi);                // Normal prior for alpha
+  bx0 ~ normal(mx0 + (sqrt(vx0) / (tau * phi)) .* rho .* alpha, sqrt((1 - rho .* rho) * vx0)); // Normal prior for bx0
+  a ~ normal(0, 1);                            // Normal prior for a, truncated to be positive
+  b ~ gamma(0.5, 0.5);                         // Gamma prior for b
+  r ~ beta(10, 10);                            // Beta prior for r, truncated to [0, 1] in params section
+  c ~ normal(0, 1);                            // Normal prior for c, truncated to be positive
+  d ~ gamma(0.5, 0.5);                         // Gamma prior for d
+  vx0 ~ normal(0, 1);                          // Normal prior for vx0, truncated to be positive
+  mx0 ~ normal(0, 1);                          // Normal prior for mx0
+
+  // Likelihood
+  by ~ normal(mu, sy);                         // Likelihood for by (observed beta_y)
+  bx ~ normal(bx0, sx);                        // Likelihood for bx (observed beta_x)
+}
+"
 
 #' Title
 #'
-#' @param D Dataset containing betaY, betaYse, betaX and betaXse
+#' @param D Data frame containing betaY, betaYse, betaX and betaXse, or MRInput object
 #' @param no_ini Number of chains
 #' @param variable.names Parameters to save estimates for
 #' @param n.iter Number of iterations (not including warmup)
 #' @param n.burnin Number of warmup iterations
+#' @param stan Fit the model using stan, default is to use JAGS
 #'
 #' @return
 #' @export
 #'
 #' @examples
-mr_horse = function(D, no_ini = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000){
-  if("theta" %in% variable.names){
-    variable.names = variable.names
-  } else{
-    variable.names = c("theta", variable.names)
+mr_horse = function(D, no_ini = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE){
+  # Validate input
+  if (is.data.frame(D)) {  # accepts data.frame, tibble, data.table
+  } else if (inherits(D, "MRInput")) {
+    # If D is an MRInput object, convert it to a data frame
+    D = data.frame(
+      betaX = D@betaX,
+      betaY = D@betaY,
+      betaXse = D@betaXse,
+      betaYse = D@betaYse
+    )
+  } else {
+    stop("Error: D must be a data frame or an MRInput object.")
   }
-  jags_fit = R2jags::jags(data = list(by = D$betaY, bx = D$betaX, sy = D$betaYse, sx = D$betaXse, N = length(D$betaY)),
-                  parameters.to.save = variable.names,
-                  n.chains = no_ini,
-                  n.iter = n.burnin + n.iter,
-                  n.burnin = n.burnin,
-                  model.file = mr_horse_model)
-  mr.coda = coda::as.mcmc(jags_fit)
-  mr_estimate = data.frame("Estimate" = round(unname(summary(mr.coda[, "theta"])$statistics[1]), 3),
-                           "SD" = round(unname(summary(mr.coda[, "theta"])$statistics[2]), 3),
-                           "2.5% quantile" = round(unname(summary(mr.coda[, "theta"])$quantiles[1]), 3),
-                           "97.5% quantile" = round(unname(summary(mr.coda[, "theta"])$quantiles[5]), 3),
-                           "Rhat" = round(unname(gelman.diag(mr.coda)$psrf[1]), 3))
-  names(mr_estimate) = c("Estimate", "SD", "2.5% quantile", "97.5% quantile", "Rhat")
-  return(list("MR_Estimate" = mr_estimate, "MR_Coda" = mr.coda))
-}
 
-#' Title
-#'
-#' @param D Dataset containing betaY, betaYse and at least betaX1, betaX1se, betaX2 and betaX2se
-#' @param no_ini Number of chains
-#' @param variable.names Parameters to save estimates for
-#' @param n.iter Number of iterations (not including warmup)
-#' @param n.burnin Number of warmup iterations
-#'
-#' @return
-#' @export
-#'
-#' @examples
-mvmr_horse = function(D, no_ini = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000){
+  if (all(c('betaX', 'betaY', 'betaXse', 'betaYse') %in% colnames(D))) {
+  } else {
+    stop("Error: D must contain columns: betaX, betaY, betaXse, betaYse")
+  }
+
+  # Ensure at least the results for theta are saved
   if("theta" %in% variable.names){
     variable.names = variable.names
   } else{
     variable.names = c("theta", variable.names)
   }
 
-  p = dim(D)[1]
-  K = sum(sapply(1:dim(D)[2], function(j){substr(names(D)[j], 1, 5)=="betaX"}))/2
 
-  Bx = D[, sprintf("betaX%i", 1:K)]
-  Sx = D[, sprintf("betaX%ise", 1:K)]
-  Tx = matrix(nrow = K, ncol = p*K)
-  for (j in 1:p){
-    Tx[, ((j-1)*K+1):(j*K)] = diag(1 / Sx[j, ]^2)
+
+
+
+
+
+  if (stan == TRUE) {
+    print('stan')
+  } else if (stan == FALSE) {
+    print('jags')
+      # jags_fit = R2jags::jags(data = list(by = D$betaY, bx = D$betaX, sy = D$betaYse, sx = D$betaXse, N = length(D$betaY)),
+      #             parameters.to.save = variable.names,
+      #             n.chains = no_ini,
+      #             n.iter = n.burnin + n.iter,
+      #             n.burnin = n.burnin,
+      #             model.file = mr_horse_model)
+  } else {
+      stop("Error: invalid input for argument stan, must be TRUE or FALSE")
   }
-  jags_fit = R2jags::jags(data = list(by = D$betaY, bx = Bx, sy = D$betaYse, Tx = Tx, N = p, K = K, R = diag(K)),
-                  parameters.to.save = variable.names,
-                  n.chains = no_ini,
-                  n.iter = n.burnin + n.iter,
-                  n.burnin = n.burnin,
-                  model.file = mvmr_horse_model)
-  mr.coda = coda::as.mcmc(jags_fit)
-  mr_estimate = data.frame("Parameter" = sprintf("theta[%i]", 1:K),
-                           "Estimate" = round(unname(summary(mr.coda)$statistics[sprintf("theta[%i]", 1:K), 1]), 3),
-                           "SD" = round(unname(summary(mr.coda)$statistics[sprintf("theta[%i]", 1:K), 2]), 3),
-                           "2.5% quantile" = round(unname(summary(mr.coda)$quantiles[sprintf("theta[%i]", 1:K), 1]), 3),
-                           "97.5% quantile" = round(unname(summary(mr.coda)$quantiles[sprintf("theta[%i]", 1:K), 5]), 3),
-                           "Rhat" = round(unname(gelman.diag(mr.coda)$psrf[sprintf("theta[%i]", 1:K), 1]), 3))
-  names(mr_estimate) = c("Parameter", "Estimate", "SD", "2.5% quantile", "97.5% quantile", "Rhat")
-  return(list("MR_Estimate" = mr_estimate, "MR_Coda" = mr.coda))
+
+
+
+  # mr.coda = coda::as.mcmc(jags_fit)
+  # mr_estimate = data.frame("Estimate" = round(unname(summary(mr.coda[, "theta"])$statistics[1]), 3),
+  #                          "SD" = round(unname(summary(mr.coda[, "theta"])$statistics[2]), 3),
+  #                          "2.5% quantile" = round(unname(summary(mr.coda[, "theta"])$quantiles[1]), 3),
+  #                          "97.5% quantile" = round(unname(summary(mr.coda[, "theta"])$quantiles[5]), 3),
+  #                          "Rhat" = round(unname(gelman.diag(mr.coda)$psrf[1]), 3))
+  # names(mr_estimate) = c("Estimate", "SD", "2.5% quantile", "97.5% quantile", "Rhat")
+  # return(list("MR_Estimate" = mr_estimate, "MR_Coda" = mr.coda))
 }
