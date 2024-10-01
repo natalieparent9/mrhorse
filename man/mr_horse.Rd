@@ -2,21 +2,22 @@
 % Please edit documentation in R/mr_horse.R
 \name{mr_horse}
 \alias{mr_horse}
-\title{Title}
+\title{Univariable MR-Horse method}
 \usage{
 mr_horse(
   D,
-  no_ini = 3,
+  n.chains = 3,
   variable.names = "theta",
   n.iter = 10000,
   n.burnin = 10000,
-  stan = FALSE
+  stan = FALSE,
+  n.cores = parallelly::availableCores()
 )
 }
 \arguments{
-\item{D}{Data frame or MRInput containing betaY, betaYse, betaX and betaXse}
+\item{D}{Data frame containing betaY, betaYse, betaX and betaXse, or MRInput object}
 
-\item{no_ini}{Number of chains}
+\item{n.chains}{Number of chains}
 
 \item{variable.names}{Parameters to save estimates for}
 
@@ -25,7 +26,12 @@ mr_horse(
 \item{n.burnin}{Number of warmup iterations}
 
 \item{stan}{Fit the model using stan, default is to use JAGS}
+
+\item{cores}{Number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()}
+}
+\value{
+List
 }
 \description{
-Title
+Causal effect estimation is performed in a Bayesian framework using a horseshoe shrinkage prior to account for both correlated and uncorrelated pleiotropic effects
 }
