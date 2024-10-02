@@ -27,11 +27,23 @@ mr_horse(
 
 \item{stan}{Fit the model using stan, default is to use JAGS}
 
-\item{cores}{Number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()}
+\item{n.cores}{Number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()}
 }
 \value{
 List
 }
 \description{
 Causal effect estimation is performed in a Bayesian framework using a horseshoe shrinkage prior to account for both correlated and uncorrelated pleiotropic effects
+}
+\examples{
+library(coda)
+
+# Load example data
+data(data_ex)
+
+# Fit model with JAGS
+MREx = mr_horse(data_ex)
+
+# Check estimates
+MREx$MR_Estimate
 }

@@ -31,55 +31,7 @@ mr_horse_model_jags = function() {
 }
 
 
-mr_horse_model_stan = "
-data {
-  int<lower=0> N;        // Number of variants (rows)
-  vector[N] by;          // Association between the variant and exposure
-  vector[N] bx;          // Association between the exposure and outcome
-  vector[N] sy;          // Standard errors for by
-  vector[N] sx;          // Standard errors for bx
-}
-
-parameters {
-  real theta;            // Causal effect of X on Y
-  vector[N] alpha;       // Pleiotropic effects on the outcome
-  vector[N] bx0;         // Effect of the variant on the exposure
-  vector<lower=0>[N] a;  // Parameter for phi[i]
-  vector<lower=0>[N] b;  // Parameter for phi[i]
-  vector<lower=0, upper=1>[N] r;  // Correlation between alpha and bx0
-  real<lower=0> c;       // Parameter for tau
-  real<lower=0> d;       // Parameter for tau
-  real<lower=0> vx0;     // Variance for bx0 distribution
-  real mx0;              // Mean for bx0 distribution
-}
-
-transformed parameters {
-  vector<lower=0>[N] phi = a ./ sqrt(b);        // Scaling factor for each variant based on parameters a and b
-  vector[N] rho = 2 * r - 1;           // Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i].
-  vector[N] mu = theta * bx0 + alpha;  // Computes the mean effect on Y for each variant
-  real<lower=0> tau = c / sqrt(d);              // Controls the global level of shrinkage for alphas
-
-}
-
-model {
-  // Priors
-  theta ~ uniform(-10, 10);
-  alpha ~ normal(0, tau * phi);
-  bx0 ~ normal(mx0 + (sqrt(vx0) / (tau * phi)) .* rho .* alpha, sqrt((1 - rho .* rho) * vx0));
-  a ~ normal(0, 1);
-  b ~ gamma(0.5, 0.5);
-  r ~ beta(10, 10);
-  c ~ normal(0, 1);
-  d ~ gamma(0.5, 0.5);
-  vx0 ~ normal(0, 1);
-  mx0 ~ normal(0, 1);
-
-  // Likelihood
-  by ~ normal(mu, sy);                         // Likelihood for by (observed beta_y)
-  bx ~ normal(bx0, sx);                        // Likelihood for bx (observed beta_x)
-}
-"
-mr_horse_model_stan = rstan::stan_model(model_code = mr_horse_model_stan) # compiles stan model
+# Stan model can be found in /inst/stan
 
 
 #' Univariable MR-Horse method
@@ -92,12 +44,14 @@ mr_horse_model_stan = rstan::stan_model(model_code = mr_horse_model_stan) # comp
 #' @param n.iter Number of iterations (not including warmup)
 #' @param n.burnin Number of warmup iterations
 #' @param stan Fit the model using stan, default is to use JAGS
-#' @param cores Number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()
+#' @param n.cores Number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()
 #'
 #' @return List
 #' @export
 #'
 #' @examples
+#' library(coda)
+#'
 #' # Load example data
 #' data(data_ex)
 #'
@@ -136,7 +90,7 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
 
   # Fit model
   if (stan == TRUE) {
-    fit = rstan::sampling(mr_horse_model_stan,
+    fit = rstan::sampling(stanmodels$mr_horse,
                    pars = variable.names,
                    data = list("N"=nrow(D), by=D$betaY, bx = D$betaX, sy = D$betaYse, sx = D$betaXse),
                    iter = n.iter + n.burnin,
@@ -163,7 +117,7 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
                            "SD" = summary(mr.coda[, "theta"])$statistics[[2]],
                            "2.5% quantile"  = summary(mr.coda[, "theta"])$quantiles[[1]],
                            "97.5% quantile" = summary(mr.coda[, "theta"])$quantiles[[5]],
-                           "Rhat" = gelman.diag(mr.coda)$psrf[[1]])
+                           "Rhat" = coda::gelman.diag(mr.coda)$psrf[[1]])
   mr_estimate = round(mr_estimate, 3)
   names(mr_estimate) = c("Estimate", "SD", "2.5% quantile", "97.5% quantile", "Rhat")
   return(list("MR_Estimate" = mr_estimate, "MR_Coda" = mr.coda))

@@ -10,12 +10,25 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports: 
-    R2jags,
-    rstan,
     coda,
-    parallelly
+    methods,
+    parallelly,
+    R2jags,
+    Rcpp (>= 0.12.0),
+    RcppParallel (>= 5.0.1),
+    rstan (>= 2.18.1),
+    rstantools (>= 2.4.0)
 Depends: 
-    R (>= 2.10)
+    R (>= 3.4.0)
 LazyData: true
 URL: https://github.com/natalieparent9/mrhorse
 BugReports: https://github.com/natalieparent9/mrhorse/issues
+Biarch: true
+LinkingTo: 
+    BH (>= 1.66.0),
+    Rcpp (>= 0.12.0),
+    RcppEigen (>= 0.3.3.3.0),
+    RcppParallel (>= 5.0.1),
+    rstan (>= 2.18.1),
+    StanHeaders (>= 2.18.0)
+SystemRequirements: GNU make
