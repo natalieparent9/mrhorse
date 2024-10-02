@@ -1,7 +1,3 @@
-library(R2jags)
-library(rstan)
-library(coda)
-library(parallelly)
 
 
 mr_horse_model_jags = function() {
@@ -38,21 +34,21 @@ mr_horse_model_jags = function() {
 #'
 #' Causal effect estimation is performed in a Bayesian framework using a horseshoe shrinkage prior to account for both correlated and uncorrelated pleiotropic effects
 #'
-#' @param D Data frame containing betaY, betaYse, betaX and betaXse, or MRInput object
-#' @param n.chains Number of chains
-#' @param variable.names Parameters to save estimates for
-#' @param n.iter Number of iterations (not including warmup)
-#' @param n.burnin Number of warmup iterations
-#' @param stan Fit the model using stan, default is to use JAGS
-#' @param n.cores Number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()
+#' @param D data frame containing betaY, betaYse, betaX and betaXse, or MRInput object
+#' @param n.chains number of chains
+#' @param variable.names parameters to save estimates for
+#' @param n.iter number of iterations (not including warmup)
+#' @param n.burnin number of warmup iterations
+#' @param stan fit the model using stan, default is to use JAGS
+#' @param n.cores number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()
 #'
-#' @return List
+#' @return Output from the mr_horse() function is a list that contains:
+#' $MR_Estimate: a data frame with the causal effect estimate (which is the posterior mean), standard deviation (i.e., the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value                                                                                                               the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value
+#  $MR_Coda: full MCMC samples for all parameters in `variable.names`
 #' @export
 #'
 #' @examples
-#' library(coda)
-#'
-#' # Load example data
+#' # Load example dataset
 #' data(data_ex)
 #'
 #' # Fit model with JAGS
@@ -60,6 +56,9 @@ mr_horse_model_jags = function() {
 #'
 #' # Check estimates
 #' MREx$MR_Estimate
+#'
+#' # Fit model with Stan
+#' MREx = mr_horse(data_ex, stan = TRUE)
 mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE, n.cores = parallelly::availableCores()){
 
   # Validate input
