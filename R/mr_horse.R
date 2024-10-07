@@ -1,4 +1,5 @@
 
+# JAGS model
 
 mr_horse_model_jags = function() {
   for (i in 1:N){                                # Where N is the number of variants (rows)
@@ -36,7 +37,7 @@ mr_horse_model_jags = function() {
 #'
 #' @param D data frame containing betaY, betaYse, betaX and betaXse, or MRInput object
 #' @param n.chains number of chains
-#' @param variable.names parameters to save estimates for
+#' @param variable.names parameters to save estimates for, in addition to theta
 #' @param n.iter number of iterations (not including warmup)
 #' @param n.burnin number of warmup iterations
 #' @param stan fit the model using stan, default is to use JAGS
