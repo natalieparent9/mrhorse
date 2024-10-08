@@ -15,35 +15,34 @@ mr_horse(
 )
 }
 \arguments{
-\item{D}{Data frame containing betaY, betaYse, betaX and betaXse, or MRInput object}
+\item{D}{data frame containing betaY, betaYse, betaX and betaXse, or MRInput object}
 
-\item{n.chains}{Number of chains}
+\item{n.chains}{number of chains}
 
-\item{variable.names}{Parameters to save estimates for}
+\item{variable.names}{parameters to save estimates for, in addition to theta}
 
-\item{n.iter}{Number of iterations (not including warmup)}
+\item{n.iter}{number of iterations (not including warmup)}
 
-\item{n.burnin}{Number of warmup iterations}
+\item{n.burnin}{number of warmup iterations}
 
-\item{stan}{Fit the model using stan, default is to use JAGS}
+\item{stan}{fit the model using stan, default is to use JAGS}
 
-\item{n.cores}{Number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()}
+\item{n.cores}{number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()}
 }
 \value{
-List
+Output from the mr_horse() function is a list that contains:
+$MR_Estimate: a data frame with the causal effect estimate (which is the posterior mean), standard deviation (i.e., the posterior standard deviation), upper and lower bounds of the 95\% credible interval, and the R-hat value                                                                                                               the posterior standard deviation), upper and lower bounds of the 95\% credible interval, and the R-hat value
 }
 \description{
 Causal effect estimation is performed in a Bayesian framework using a horseshoe shrinkage prior to account for both correlated and uncorrelated pleiotropic effects
 }
 \examples{
-library(coda)
-
-# Load example data
-data(data_ex)
-
 # Fit model with JAGS
-MREx = mr_horse(data_ex)
+# MREx = mr_horse(data_ex, n.burnin = 1000, n.iter = 2000)
 
 # Check estimates
-MREx$MR_Estimate
+# MREx$MR_Estimate
+
+# Fit model with Stan
+# MREx = mr_horse(data_ex, n.warmup = 1000, n.iter = 2000, stan = TRUE)
 }

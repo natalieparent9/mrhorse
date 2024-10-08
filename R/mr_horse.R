@@ -49,17 +49,15 @@ mr_horse_model_jags = function() {
 #' @export
 #'
 #' @examples
-#' # Load example dataset
-#' data(data_ex)
-#'
 #' # Fit model with JAGS
-#' MREx = mr_horse(data_ex)
+#' # data(data_ex)
+#' # MREx = mr_horse(data_ex, n.burnin = 1000, n.iter = 2000)
 #'
 #' # Check estimates
-#' MREx$MR_Estimate
+#' # MREx$MR_Estimate
 #'
 #' # Fit model with Stan
-#' MREx = mr_horse(data_ex, stan = TRUE)
+#' # MREx = mr_horse(data_ex, n.warmup = 1000, n.iter = 2000, stan = TRUE)
 mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE, n.cores = parallelly::availableCores()){
 
   # Validate input
