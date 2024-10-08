@@ -94,17 +94,17 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
     variable.names = c("theta", variable.names)
   }
 
-  # Initialize precision matrix
+  # Initialize precision/covariance matrix
   Tx = matrix(0, nrow = K, ncol = p * K)
-  for (j in 1:p) {
-    Tx[, ((j-1)*K+1):(j*K)] = diag(Sx[j, ]^2)
-  }
 
-  data_list = data = list(by = D$betaY, bx = Bx, sy = D$betaYse, Tx = Tx, N = p, K = K, R = diag(K))
+  data_list = list(by = D$betaY, bx = Bx, sy = D$betaYse, Tx = Tx, N = p, K = K, R = diag(K))
 
   cat("Fitting model with ", K, " exposures", sep='')
 
   if (stan == TRUE) {  # Run using Stan
+    for (j in 1:p) {
+      data_list$Tx[, ((j-1)*K+1):(j*K)] = diag(Sx[j, ]^2) # fill covariance matrix
+    }
     fit = rstan::sampling(stanmodels$mvmr_horse,
                         data = data_list,
                         pars = variable.names,
@@ -112,23 +112,27 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
                         iter = n.burnin + n.iter,
                         warmup = n.burnin,
                         cores = n.cores,
-                        n.thin = 1                  # remove thinning that occurs by default
                         # control = ifelse(algorithm=='NUTS',list(adapt_delta = adapt_delta, max_treedepth = max_treedepth), list())
     )
     mr.coda = rstan::As.mcmc.list(fit)
 
   } else if (stan == FALSE) {  # Run using JAGS
-      fit = R2jags::jags.parallel(data = data_list,
-                                       model.file = mvmr_horse_model_jags,
-                                       parameters.to.save = variable.names,
-                                       n.chains = n.chains,
-                                       n.iter = n.burnin + n.iter,
-                                       n.burnin = n.burnin,
-                                       n.cluster = n.cores)
-      mr.coda = coda::as.mcmc(fit)
+    for (j in 1:p) {
+      data_list$Tx[, ((j-1)*K+1):(j*K)] = diag(1 / Sx[j, ]^2)   # fill precision matrix
+    }
+
+    fit = R2jags::jags.parallel(data = data_list,
+                                     model.file = mvmr_horse_model_jags,
+                                     parameters.to.save = variable.names,
+                                     n.chains = n.chains,
+                                     n.iter = n.burnin + n.iter,
+                                     n.burnin = n.burnin,
+                                     n.cluster = n.cores,
+                                     n.thin = 1)                  # remove thinning that occurs by default
+    mr.coda = coda::as.mcmc(fit)
 
   } else {
-    # stop("Error: invalid input for argument stan, must be TRUE or FALSE")
+      stop("Error: invalid input for argument stan, must be TRUE or FALSE")
   }
 
 
