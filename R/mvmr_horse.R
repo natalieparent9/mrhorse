@@ -3,34 +3,34 @@
 # JAGS model
 
 mvmr_horse_model_jags = function() {
-  for (i in 1:N){
-    by[i] ~ dnorm(mu[i], 1 / (sy[i] * sy[i]))
-    mu[i] = inprod(bx0[i, 1:K], theta) + alpha[i]
-    bx[i,1:K] ~ dmnorm(bx0[i,1:K], Tx[1:K, ((i-1)*K+1):(i*K)])
+  for (i in 1:N){                                                   # number of variants (rows)
+    by[i] ~ dnorm(mu[i], 1 / (sy[i] * sy[i]))                       # Association between the exposures and outcome
+    mu[i] = inprod(bx0[i, 1:K], theta) + alpha[i]                   # Mean effect on Y for each variant
+    bx[i,1:K] ~ dmnorm(bx0[i,1:K], Tx[1:K, ((i-1)*K+1):(i*K)])      # Association between the variants and exposures
 
-    kappa[i] = (rho[i]^2 / (1 + K*rho[i]^2))
-    bx0[i,1:K] ~ dmnorm(mx + sx0 * rho[i] * alpha[i] / (phi[i] * tau), A - kappa[i] * B)
-    r[i] ~ dbeta(10, 10);T(, 1)
-    rho[i] = 2*r[i] -1
-    alpha[i] ~ dnorm(0, 1 / (tau * tau * phi[i] * phi[i]))
-    phi[i] = a[i] / sqrt(b[i])
-    a[i] ~ dnorm(0, 1);T(0, )
-    b[i] ~ dgamma(0.5, 0.5)
+    kappa[i] = (rho[i]^2 / (1 + K*rho[i]^2))                        # Used to adjust bx0
+    bx0[i,1:K] ~ dmnorm(mx + sx0 * rho[i] * alpha[i] / (phi[i] * tau), A - kappa[i] * B) # Latent effect of the variants on the exposures
+    r[i] ~ dbeta(10, 10);T(, 1)                                     # Correlation between alpha and bx0
+    rho[i] = 2*r[i] -1                                              # Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i]
+    alpha[i] ~ dnorm(0, 1 / (tau * tau * phi[i] * phi[i]))          # Pleiotropic effects on the outcome
+    phi[i] = a[i] / sqrt(b[i])                                      # Scaling factor for each variant based on parameters a and b
+    a[i] ~ dnorm(0, 1);T(0, )                                       # Parameter for phi[i]
+    b[i] ~ dgamma(0.5, 0.5)                                         # Parameter for phi[i]
   }
 
-  c ~ dnorm(0, 1);T(0, )
-  d ~ dgamma(0.5, 0.5)
-  tau = c / sqrt(d)
+  c ~ dnorm(0, 1);T(0, )                                            # Parameter for tau
+  d ~ dgamma(0.5, 0.5)                                              # Parameter for tau
+  tau = c / sqrt(d)                                                 # Controls the global level of shrinkage for alphas
 
   mx ~ dmnorm(rep(0, K), R[,])
 
   for (k in 1:K){
-    vx0[k] ~ dnorm(0, 1);T(0, )
-    sx0[k] = sqrt(vx0[k])
-    theta[k] ~ dunif(-10, 10)
+    vx0[k] ~ dnorm(0, 1);T(0, )              # Variance for bx0 distribution
+    sx0[k] = sqrt(vx0[k])                    # Standard error for bx0 distribution
+    theta[k] ~ dunif(-10, 10)                # Causal effect of X[k] on Y
     for (j in 1:K){
-      A[j, k] = ifelse(j==k, 1/vx0[j], 0)
-      B[j, k] = 1 / (sx0[j] * sx0[k])
+      A[j, k] = ifelse(j==k, 1/vx0[j], 0)    # Precision matrix
+      B[j, k] = 1 / (sx0[j] * sx0[k])        # Covariance matrix
     }
   }
 }
@@ -56,11 +56,14 @@ mvmr_horse_model_jags = function() {
 #' # data(data_mv_ex)
 #' # MREx = mvmr_horse(data_mv_ex, n.warmup = 1000, n.iter = 2000)
 #'
-#' # Check estimates
+#' # Check estimates for theta
 #' # MREx$MR_Estimate
 #'
 #' # Fit model with Stan
 #' # MREx = mvmr_horse(data_mv_ex, n.warmup = 1000, n.iter = 2000, stan = TRUE)
+#'
+#'
+#'
 mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE, n.cores = parallelly::availableCores()){
 
   # Validate input
@@ -85,14 +88,12 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
   }
 
   if (K < 2) stop("Error: Dataset must contain at least two exposures")
-  if (!all(c('betaY','betaYse') %in% colnames(D))) stop("Error: betaY and/or betaYse are missing")
+  if (!all(c('betaY','betaYse') %in% colnames(D)) & !all(c('betaY','betaYse') %in% slotNames(D))) {
+    stop("Error: betaY and/or betaYse are missing")
+  }
 
   # Ensure at least the results for theta parameter are saved
-  if("theta" %in% variable.names){
-    variable.names = variable.names
-  } else{
-    variable.names = c("theta", variable.names)
-  }
+  variable.names = unique(c("theta", variable.names))
 
   # Initialize precision/covariance matrix
   Tx = matrix(0, nrow = K, ncol = p * K)

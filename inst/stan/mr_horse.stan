@@ -1,7 +1,7 @@
 
 data {
   int<lower=0> N;        // Number of variants (rows)
-  vector[N] by;          // Association between the variant and exposure
+  vector[N] by;          // Association between the variants and exposure
   vector[N] bx;          // Association between the exposure and outcome
   vector[N] sy;          // Standard errors for by
   vector[N] sx;          // Standard errors for bx
@@ -10,7 +10,7 @@ data {
 parameters {
   real theta;            // Causal effect of X on Y
   vector[N] alpha;       // Pleiotropic effects on the outcome
-  vector[N] bx0;         // Effect of the variant on the exposure
+  vector[N] bx0;         // Latent effect of the variant on the exposure
   vector<lower=0>[N] a;  // Parameter for phi[i]
   vector<lower=0>[N] b;  // Parameter for phi[i]
   vector<lower=0, upper=1>[N] r;  // Correlation between alpha and bx0
@@ -21,10 +21,10 @@ parameters {
 }
 
 transformed parameters {
-  vector<lower=0>[N] phi = a ./ sqrt(b);        // Scaling factor for each variant based on parameters a and b
-  vector[N] rho = 2 * r - 1;           // Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i].
-  vector[N] mu = theta * bx0 + alpha;  // Computes the mean effect on Y for each variant
-  real<lower=0> tau = c / sqrt(d);              // Controls the global level of shrinkage for alphas
+  vector<lower=0>[N] phi = a ./ sqrt(b);  // Scaling factor for each variant based on parameters a and b
+  vector[N] rho = 2 * r - 1;              // Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i]
+  vector[N] mu = theta * bx0 + alpha;     // Computes the mean effect on Y for each variant
+  real<lower=0> tau = c / sqrt(d);        // Controls the global level of shrinkage for alphas
 
 }
 

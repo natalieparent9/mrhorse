@@ -1,5 +1,4 @@
 
-
 #' The 'mrhorse' package.
 #'
 #' @description A DESCRIPTION OF THE PACKAGE

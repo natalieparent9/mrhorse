@@ -58,6 +58,17 @@ mr_horse_model_jags = function() {
 #'
 #' # Fit model with Stan
 #' # MREx = mr_horse(data_ex, n.warmup = 1000, n.iter = 2000, stan = TRUE)
+#'
+#' # Save samples for tau parameter (in addition to theta)
+#' # MREx = mr_horse(data_ex, n.warmup = 1000, n.iter = 2000, variable.names = 'tau')
+#' # summary(MREx$MR_coda)
+#'
+#'
+#' # View diagnostic plots
+#' # library(bayesplot)
+#' #
+#'
+#'
 mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE, n.cores = parallelly::availableCores()){
 
   # Validate input
@@ -80,11 +91,7 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
   }
 
   # Ensure at least the results for theta parameter are saved
-  if("theta" %in% variable.names){
-    variable.names = variable.names
-  } else{
-    variable.names = c("theta", variable.names)
-  }
+  variable.names = unique(c("theta", variable.names))
 
   # Fit model
   if (stan == TRUE) {
