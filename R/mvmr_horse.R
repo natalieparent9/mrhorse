@@ -62,7 +62,8 @@ mvmr_horse_model_jags = function() {
 #' # Fit model with Stan
 #' # MREx = mvmr_horse(data_mv_ex, n.warmup = 1000, n.iter = 2000, stan = TRUE)
 #'
-#'
+#' # View diagnostic plots (trace and density)
+#' # plot(MREx$MR_Coda[,c('theta[1]','theta[2]')])
 #'
 mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE, n.cores = parallelly::availableCores()){
 
@@ -121,7 +122,6 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
     for (j in 1:p) {
       data_list$Tx[, ((j-1)*K+1):(j*K)] = diag(1 / Sx[j, ]^2)   # fill precision matrix
     }
-
     fit = R2jags::jags.parallel(data = data_list,
                                      model.file = mvmr_horse_model_jags,
                                      parameters.to.save = variable.names,
@@ -129,7 +129,7 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
                                      n.iter = n.burnin + n.iter,
                                      n.burnin = n.burnin,
                                      n.cluster = n.cores,
-                                     n.thin = 1)                  # remove thinning that occurs by default
+                                     n.thin = 1)                # remove thinning that occurs by default
     mr.coda = coda::as.mcmc(fit)
 
   } else {

@@ -10,6 +10,7 @@ mvmr_horse(
   variable.names = "theta",
   n.iter = 10000,
   n.burnin = 10000,
+  stan = FALSE,
   n.cores = parallelly::availableCores()
 )
 }
@@ -24,6 +25,8 @@ mvmr_horse(
 
 \item{n.burnin}{Number of warmup iterations}
 
+\item{stan}{fit the model using stan, default is to use JAGS}
+
 \item{n.cores}{Number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()}
 }
 \value{
@@ -35,11 +38,16 @@ Multivariable MR-Horse method
 }
 \examples{
 # Fit model with JAGS
+# data(data_mv_ex)
 # MREx = mvmr_horse(data_mv_ex, n.warmup = 1000, n.iter = 2000)
 
-# Check estimates
+# Check estimates for theta
 # MREx$MR_Estimate
 
 # Fit model with Stan
 # MREx = mvmr_horse(data_mv_ex, n.warmup = 1000, n.iter = 2000, stan = TRUE)
+
+# View diagnostic plots (trace and density)
+# plot(MREx$MR_Coda[,c('theta[1]','theta[2]')])
+
 }

@@ -61,34 +61,19 @@ mr_horse_model_jags = function() {
 #'
 #' # Save samples for tau parameter (in addition to theta)
 #' # MREx = mr_horse(data_ex, n.warmup = 1000, n.iter = 2000, variable.names = 'tau')
-#' # summary(MREx$MR_coda)
+#' # summary(MREx$MR_Coda)
 #'
-#'
-#' # View diagnostic plots
-#' # library(bayesplot)
+#' # View diagnostic plots (trace and density)
+#' # plot(MREx$MR_Coda[,c('theta','tau')])
 #' #
-#'
 #'
 mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE, n.cores = parallelly::availableCores()){
 
-  # Validate input
-  if (is.data.frame(D)) {  # accepts data.frame, tibble, data.table
-  } else if (inherits(D, "MRInput")) {
-    # If D is an MRInput object, convert it to a data frame
-    D = data.frame(
-      betaX = D@betaX,
-      betaY = D@betaY,
-      betaXse = D@betaXse,
-      betaYse = D@betaYse
-    )
-  } else {
-    stop("Error: D must be a data frame or an MRInput object.")
-  }
+  # Validate data input, accepts data frame, data table, tibble or MRInput object (does not require conversion)
+  if (!(is.data.frame(D) | inherits(D, "MRInput"))) stop("Error: D must be a data frame or an MRInput object")
 
-  if (all(c('betaX', 'betaY', 'betaXse', 'betaYse') %in% colnames(D))) {
-  } else {
-    stop("Error: D must contain columns: betaX, betaY, betaXse, betaYse")
-  }
+  vars = c('betaX', 'betaY', 'betaXse', 'betaYse')
+  if (!(all(vars %in% colnames(D)) | all(vars %in% slotNames(D)))) stop("Error: D must contain columns: betaX, betaY, betaXse, betaYse")
 
   # Ensure at least the results for theta parameter are saved
   variable.names = unique(c("theta", variable.names))
@@ -97,7 +82,7 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
   if (stan == TRUE) {
     fit = rstan::sampling(stanmodels$mr_horse,
                    pars = variable.names,
-                   data = list("N"=nrow(D), by=D$betaY, bx = D$betaX, sy = D$betaYse, sx = D$betaXse),
+                   data = list("N"=length(D$betaY), by=D$betaY, bx = D$betaX, sy = D$betaYse, sx = D$betaXse),
                    iter = n.iter + n.burnin,
                    warmup = n.burnin,
                    chains = n.chains,

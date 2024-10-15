@@ -38,6 +38,7 @@ Causal effect estimation is performed in a Bayesian framework using a horseshoe 
 }
 \examples{
 # Fit model with JAGS
+# data(data_ex)
 # MREx = mr_horse(data_ex, n.burnin = 1000, n.iter = 2000)
 
 # Check estimates
@@ -45,4 +46,13 @@ Causal effect estimation is performed in a Bayesian framework using a horseshoe 
 
 # Fit model with Stan
 # MREx = mr_horse(data_ex, n.warmup = 1000, n.iter = 2000, stan = TRUE)
+
+# Save samples for tau parameter (in addition to theta)
+# MREx = mr_horse(data_ex, n.warmup = 1000, n.iter = 2000, variable.names = 'tau')
+# summary(MREx$MR_Coda)
+
+# View diagnostic plots (trace and density)
+# plot(MREx$MR_Coda[,c('theta','tau')])
+#
+
 }
