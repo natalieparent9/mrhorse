@@ -1,8 +1,7 @@
 Package: mrhorse
 Title: R Package for Bayesian Mendelian Randomisation with Horseshoe Shrinkage Prior
 Version: 0.0.0.9000
-Authors@R: 
-    person("Andrew", "Grant")
+Authors@R: person("Andrew", "Grant", role = c("aut", "cre"), email = "andrew.grant1@sydney.edu.au")
 Description: Provides functions to perform univariable and multivariable Mendelian randomization. Causal effect estimation is performed in a Bayesian framework using a horseshoe shrinkage prior to account for both correlated and uncorrelated pleiotropic effects.
 License: MIT + file LICENSE
 Encoding: UTF-8
