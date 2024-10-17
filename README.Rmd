@@ -13,18 +13,34 @@ knitr::opts_chunk$set(
 
 # mrhorse
 
+  <!-- badges: start -->
+  [![R-CMD-check](https://github.com/natalieparent9/mrhorse/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/natalieparent9/mrhorse/actions/workflows/R-CMD-check.yaml)
+  <!-- badges: end -->
+
+
 Provides the R code to implement the methods described in:
 
 Grant, AJ and Burgess, S (2024). [A Bayesian approach to Mendelian randomization using summary statistics in the univariable and multivariable settings with correlated pleiotropy](https://doi.org/10.1016/j.ajhg.2023.12.002). *American Journal of Human Genetics*. 111(1):165-180. doi: <https://doi.org/10.1016/j.ajhg.2023.12.002>
 
+The paper introduces a method for performing both univariable and multivariable Mendelian randomization to examine the
+causal effect of one or more exposures on an outcome using genetic association data. The methods take as input estimates
+of the associations between genetic instruments and the exposure(s) and outcome from GWAS summary statistics. Causal
+effect estimation is performed in a Bayesian framework using a horseshoe shrinkage prior to account for both correlated
+and uncorrelated pleiotropic effects.
+
+
 ## Installation
+
+In order to run the code, [JAGS](https://sourceforge.net/projects/mcmc-jags/) first needs to be installed.
 
 You can install the development version of mrhorse from [GitHub](https://github.com/) with:
 
-``` r
+```{r message=FALSE, warning=FALSE}
 library(devtools)
-source_URL("https://github.com/aj-grant/mr_horse.R")
+devtools::install_github("natalieparent9/mrhorse")
+library(mrhorse)
 ```
+
 
 ## Implementation
 
@@ -55,20 +71,35 @@ JAGS plotting tools can be used with the MCMC output, for example using `tracepl
 
 The function `mvmr_horse` implements the multivariable MVMR-Horse method. The required inputs are as above, but where `betaX` is replaced by the K columns `betaX1`, `betaX2`, ..., and `betaXse` is replaced by the K columns `betaX1se`, `betaX2se`, ... .
 
-## Example
+## Examples
 
-This is a basic example which shows you how to solve a common problem:
+### Univariable MR
 
-```{r example}
-library(mrhorse)
-```
-
-```{r message=FALSE, warning=FALSE}
-# Fit model with JAGS
-MREx = mr_horse(data_ex)
-```
+The csv file dat_ex.csv contains a dataframe containing simulated genetic association estimates between 100 genetic instruments and an exposure and outcome, as well as their corresponding standard errors. This is taken from the first replication of the first simulation study (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). The dataset can be analysed as follows.
 
 ```{r}
-# Check estimates
+set.seed(20230531)
+MREx = mr_horse(data_ex, n.iter=1000, n.burnin=1000)
 MREx$MR_Estimate
 ```
+
+View diagnostic plots
+
+```{r}
+coda::traceplot(MREx$MR_Coda[, "theta"])
+coda::densplot(MREx$MR_Coda[, "theta"])
+```
+
+Note the R2jags and rstan package also have a traceplot and densplot function
+
+### Multivariable MR
+
+The csv file dat_mv_ex.csv contains a dataframe containing simulated genetic association estimates between 100 genetic instruments and two exposures and an outcome, as well as their corresponding standard errors. This is taken from the first replication of the multivariable simulation study (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). The dataset can be analysed as follows.
+
+```{r}
+set.seed(20230531)
+MVMREx = mvmr_horse(data_mv_ex, n.iter=1000, n.burnin=1000)
+MVMREx$MR_Estimate
+```
+
+

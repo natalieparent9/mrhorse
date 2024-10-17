@@ -39,7 +39,7 @@ static constexpr std::array<const char*, 74> locations_array__ =
   " (in 'mvmr_horse', line 18, column 4 to column 27)",
   " (in 'mvmr_horse', line 19, column 4 to column 20)",
   " (in 'mvmr_horse', line 20, column 4 to column 20)",
-  " (in 'mvmr_horse', line 23, column 4 to column 27)",
+  " (in 'mvmr_horse', line 23, column 4 to column 36)",
   " (in 'mvmr_horse', line 24, column 4 to column 33)",
   " (in 'mvmr_horse', line 25, column 4 to column 30)",
   " (in 'mvmr_horse', line 26, column 4 to column 47)",
@@ -64,10 +64,10 @@ static constexpr std::array<const char*, 74> locations_array__ =
   " (in 'mvmr_horse', line 49, column 4 to column 21)",
   " (in 'mvmr_horse', line 50, column 4 to column 24)",
   " (in 'mvmr_horse', line 51, column 4 to column 43)",
-  " (in 'mvmr_horse', line 53, column 8 to column 30)",
-  " (in 'mvmr_horse', line 54, column 8 to column 36)",
-  " (in 'mvmr_horse', line 52, column 19 to line 55, column 5)",
-  " (in 'mvmr_horse', line 52, column 4 to line 55, column 5)",
+  " (in 'mvmr_horse', line 54, column 8 to column 30)",
+  " (in 'mvmr_horse', line 55, column 8 to column 36)",
+  " (in 'mvmr_horse', line 53, column 19 to line 56, column 5)",
+  " (in 'mvmr_horse', line 53, column 4 to line 56, column 5)",
   " (in 'mvmr_horse', line 2, column 4 to column 19)",
   " (in 'mvmr_horse', line 3, column 4 to column 19)",
   " (in 'mvmr_horse', line 4, column 11 to column 12)",
@@ -463,6 +463,8 @@ public:
           stan::math::inverse(precision_matrix),
           "assigning variable covariance_matrix", stan::model::index_uni(i));
       }
+      current_statement__ = 11;
+      stan::math::check_greater_or_equal(function__, "tau", tau, 0);
       {
         current_statement__ = 32;
         for (int i = 1; i <= N; ++i) {
@@ -709,6 +711,8 @@ public:
           stan::math::inverse(precision_matrix),
           "assigning variable covariance_matrix", stan::model::index_uni(i));
       }
+      current_statement__ = 11;
+      stan::math::check_greater_or_equal(function__, "tau", tau, 0);
       if (emit_transformed_parameters__) {
         out__.write(tau);
         out__.write(phi);

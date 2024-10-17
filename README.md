@@ -1,6 +1,10 @@
 
 # mrhorse
 
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/natalieparent9/mrhorse/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/natalieparent9/mrhorse/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
+
 Provides the R code to implement the methods described in:
 
 Grant, AJ and Burgess, S (2024). [A Bayesian approach to Mendelian
@@ -10,14 +14,28 @@ pleiotropy](https://doi.org/10.1016/j.ajhg.2023.12.002). *American
 Journal of Human Genetics*. 111(1):165-180. doi:
 <https://doi.org/10.1016/j.ajhg.2023.12.002>
 
+The paper introduces a method for performing both univariable and
+multivariable Mendelian randomization to examine the causal effect of
+one or more exposures on an outcome using genetic association data. The
+methods take as input estimates of the associations between genetic
+instruments and the exposure(s) and outcome from GWAS summary
+statistics. Causal effect estimation is performed in a Bayesian
+framework using a horseshoe shrinkage prior to account for both
+correlated and uncorrelated pleiotropic effects.
+
 ## Installation
+
+In order to run the code,
+[JAGS](https://sourceforge.net/projects/mcmc-jags/) first needs to be
+installed.
 
 You can install the development version of mrhorse from
 [GitHub](https://github.com/) with:
 
 ``` r
 library(devtools)
-source_URL("https://github.com/aj-grant/mr_horse.R")
+devtools::install_github("natalieparent9/mrhorse")
+library(mrhorse)
 ```
 
 ## Implementation
@@ -65,22 +83,57 @@ method. The required inputs are as above, but where `betaX` is replaced
 by the K columns `betaX1`, `betaX2`, …, and `betaXse` is replaced by the
 K columns `betaX1se`, `betaX2se`, … .
 
-## Example
+## Examples
 
-This is a basic example which shows you how to solve a common problem:
+### Univariable MR
 
-``` r
-library(mrhorse)
-```
-
-``` r
-# Fit model with JAGS
-MREx = mr_horse(data_ex)
-```
+The csv file dat_ex.csv contains a dataframe containing simulated
+genetic association estimates between 100 genetic instruments and an
+exposure and outcome, as well as their corresponding standard errors.
+This is taken from the first replication of the first simulation study
+(that is, where 20% of variants are pleiotropic, and pleiotropy is
+balanced). The dataset can be analysed as follows.
 
 ``` r
-# Check estimates
+set.seed(20230531)
+MREx = mr_horse(data_ex, n.iter=1000, n.burnin=1000)
 MREx$MR_Estimate
-#>   Estimate    SD 2.5% quantile 97.5% quantile  Rhat
-#> 1    0.097 0.018         0.064          0.132 1.001
+#>   Estimate    SD 2.5% quantile 97.5% quantile Rhat
+#> 1    0.099 0.018         0.065          0.134    1
+```
+
+View diagnostic plots
+
+``` r
+coda::traceplot(MREx$MR_Coda[, "theta"])
+```
+
+<img src="man/figures/README-unnamed-chunk-4-1.png" width="100%" />
+
+``` r
+coda::densplot(MREx$MR_Coda[, "theta"])
+```
+
+<img src="man/figures/README-unnamed-chunk-4-2.png" width="100%" />
+
+Note the R2jags and rstan package also have a traceplot and densplot
+function
+
+### Multivariable MR
+
+The csv file dat_mv_ex.csv contains a dataframe containing simulated
+genetic association estimates between 100 genetic instruments and two
+exposures and an outcome, as well as their corresponding standard
+errors. This is taken from the first replication of the multivariable
+simulation study (that is, where 20% of variants are pleiotropic, and
+pleiotropy is balanced). The dataset can be analysed as follows.
+
+``` r
+set.seed(20230531)
+MVMREx = mvmr_horse(data_mv_ex, n.iter=1000, n.burnin=1000)
+#> Fitting model with 2 exposures
+MVMREx$MR_Estimate
+#>   Parameter Estimate    SD 2.5% quantile 97.5% quantile  Rhat
+#> 1  theta[1]    0.099 0.018         0.064          0.135 1.004
+#> 2  theta[2]    0.104 0.018         0.068          0.140 1.002
 ```
