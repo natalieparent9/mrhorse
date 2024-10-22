@@ -11,7 +11,8 @@ mr_horse(
   n.iter = 10000,
   n.burnin = 10000,
   stan = FALSE,
-  n.cores = parallelly::availableCores()
+  n.cores = parallelly::availableCores(),
+  fixed_tau = -1
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ mr_horse(
 \item{stan}{fit the model using stan, default is to use JAGS}
 
 \item{n.cores}{number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()}
+
+\item{fixed_tau}{a fixed value for tau, otherwise tau will be estimated}
 }
 \value{
 Output from the mr_horse() function is a list that contains:

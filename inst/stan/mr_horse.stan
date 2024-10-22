@@ -1,10 +1,11 @@
 
 data {
-  int<lower=0> N;        // Number of variants (rows)
-  vector[N] by;          // Association between the variants and exposure
-  vector[N] bx;          // Association between the exposure and outcome
-  vector[N] sy;          // Standard errors for by
-  vector[N] sx;          // Standard errors for bx
+  int<lower=0> N;           // Number of variants (rows)
+  vector[N] by;             // Association between the variants and exposure
+  vector[N] bx;             // Association between the exposure and outcome
+  vector[N] sy;             // Standard errors for by
+  vector[N] sx;             // Standard errors for bx
+  real<lower=-1> fixed_tau; // Fixed tau value
 }
 
 parameters {
@@ -24,8 +25,12 @@ transformed parameters {
   vector<lower=0>[N] phi = a ./ sqrt(b);  // Scaling factor for each variant based on parameters a and b
   vector[N] rho = 2 * r - 1;              // Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i]
   vector[N] mu = theta * bx0 + alpha;     // Computes the mean effect on Y for each variant
-  real<lower=0> tau = c / sqrt(d);        // Controls the global level of shrinkage for alphas
-
+  real<lower=0> tau;                      // Controls the global level of shrinkage for alphas
+  if (fixed_tau == -1) {                  // If defaul value of -1 is given, estimate tau, otherwise fix
+    tau = c / sqrt(d);
+  } else {
+    tau = fixed_tau;
+  }
 }
 
 model {
