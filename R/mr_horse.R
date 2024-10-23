@@ -24,7 +24,7 @@ mr_horse_model_jags = function(f=c('standard', 'fixed_tau')) {
 
     c ~ dnorm(0, 1);T(0, )       # Parameter for tau
     d ~ dgamma(0.5, 0.5)         # Parameter for tau
-    tau = c / sqrt(d)            # Controls the global level of shrinkage for alphas
+    $TAU
 
     vx0 ~ dnorm(0, 1);T(0, )     # Variance for bx0 distribution
     mx0 ~ dnorm(0, 1)            # Mean for bx0 distribution
@@ -59,10 +59,12 @@ mr_horse_model_jags = function(f=c('standard', 'fixed_tau')) {
 #' @param stan fit the model using stan, default is to use JAGS
 #' @param n.cores number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()
 #' @param fixed_tau a fixed value for tau, otherwise tau will be estimated
+#' @param return_fit return the fitted JAGS or Stan model object, default is FALSE
 #'
 #' @return Output from the mr_horse() function is a list that contains:
 #' $MR_Estimate: a data frame with the causal effect estimate (which is the posterior mean), standard deviation (i.e., the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value                                                                                                               the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value
 #  $MR_Coda: full MCMC samples for all parameters in `variable.names`
+#  $Fit: the fitted model object (if reuturn_fit was set to TRUE)
 #' @export
 #'
 #' @examples
@@ -84,7 +86,7 @@ mr_horse_model_jags = function(f=c('standard', 'fixed_tau')) {
 #' # plot(MREx$MR_Coda[,c('theta','tau')])
 #' #
 #'
-mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE, n.cores = parallelly::availableCores(), fixed_tau = -1){
+mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE, n.cores = parallelly::availableCores(), fixed_tau = -1, return_fit = FALSE){
 
   # Validate data input, accepts data frame, data table, tibble or MRInput object (does not require conversion)
   if (!(is.data.frame(D) | inherits(D, "MRInput"))) stop("Error: D must be a data frame or an MRInput object")
@@ -115,6 +117,7 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
                    iter = n.iter + n.burnin,
                    warmup = n.burnin,
                    chains = n.chains,
+                   open_progress = FALSE, # prevent pop up during testing, does not suppress progress being printed in console
                    # control = list(adapt_delta = 0.9, max_treedepth = 12),
                    cores = n.cores)
     mr.coda = rstan::As.mcmc.list(fit)
@@ -139,5 +142,7 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
                            "Rhat" = coda::gelman.diag(mr.coda)$psrf[[1]])
   mr_estimate = round(mr_estimate, 3)
   names(mr_estimate) = c("Estimate", "SD", "2.5% quantile", "97.5% quantile", "Rhat")
+
+  if (return_fit == TRUE) return(list("MR_Estimate" = mr_estimate, "MR_Coda" = mr.coda, 'Fit' = fit))
   return(list("MR_Estimate" = mr_estimate, "MR_Coda" = mr.coda))
 }
