@@ -24,7 +24,7 @@ mr_horse_model_jags = function(f=c('standard', 'fixed_tau')) {
 
     c ~ dnorm(0, 1);T(0, )       # Parameter for tau
     d ~ dgamma(0.5, 0.5)         # Parameter for tau
-    $TAU
+    $TAU                         # Fixed or estimated depending on macro chosen
 
     vx0 ~ dnorm(0, 1);T(0, )     # Variance for bx0 distribution
     mx0 ~ dnorm(0, 1)            # Mean for bx0 distribution
@@ -135,11 +135,11 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
       stop("Error: invalid input for argument stan, must be TRUE or FALSE")
   }
 
-  mr_estimate = data.frame("Estimate" = summary(mr.coda[, "theta"])$statistics[[1]],
-                           "SD" = summary(mr.coda[, "theta"])$statistics[[2]],
+  mr_estimate = data.frame("Estimate"       = summary(mr.coda[, "theta"])$statistics[[1]],
+                           "SD"             = summary(mr.coda[, "theta"])$statistics[[2]],
                            "2.5% quantile"  = summary(mr.coda[, "theta"])$quantiles[[1]],
                            "97.5% quantile" = summary(mr.coda[, "theta"])$quantiles[[5]],
-                           "Rhat" = coda::gelman.diag(mr.coda)$psrf[[1]])
+                           "Rhat"           = coda::gelman.diag(mr.coda[, "theta"])$psrf[[1]])
   mr_estimate = round(mr_estimate, 3)
   names(mr_estimate) = c("Estimate", "SD", "2.5% quantile", "97.5% quantile", "Rhat")
 

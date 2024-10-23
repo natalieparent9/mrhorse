@@ -25,6 +25,7 @@ transformed parameters {
   vector<lower=0>[N] phi = a ./ sqrt(b);  // Scaling factor for each variant based on parameters a and b
   vector[N] rho = 2 * r - 1;              // Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i]
   vector[N] mu = theta * bx0 + alpha;     // Computes the mean effect on Y for each variant
+
   real<lower=0> tau;                      // Controls the global level of shrinkage for alphas
   if (fixed_tau == -1) {                  // If defaul value of -1 is given, estimate tau, otherwise fix
     tau = c / sqrt(d);

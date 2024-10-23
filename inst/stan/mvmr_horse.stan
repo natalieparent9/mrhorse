@@ -6,6 +6,7 @@ data {
     vector[N] sy;                      // Standard errors for by
     matrix[K, K*N] Tx;                 // Covariance matrix for bx
     matrix[K, K] R;                    // Prior precision matrix for mx, diagonal of 1s
+    real<lower=-1> fixed_tau;          // Fixed tau value
 }
 
 parameters {
@@ -22,18 +23,26 @@ parameters {
 }
 
 transformed parameters {
-    real<lower=0> tau = c / sqrt(d);                // Controls the global level of shrinkage for alphas
     vector[N] phi = a ./ sqrt(b);                   // Scaling factor for each variant based on parameters a and b
     vector[N] rho = 2 * r - 1;                      // Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i]
     vector[N] kappa = (rho^2 ./ (1 + K*rho^2));     // Used to adjust bx0
     matrix[K, K] A = diag_matrix(1.0 ./ vx0);       // Diagonal precision matrix for bx0, diagonal elements are 1/vx0, off-diagonal are 0
     matrix[K, K] B = (1.0 ./ sqrt(vx0)) * (1.0 ./ sqrt(vx0))'; // Matrix B for covariance
-    matrix[K, K] covariance_matrix[N];
+
+    real<lower=0> tau;                      // Controls the global level of shrinkage for alphas
+    if (fixed_tau == -1) {                  // If defaul value of -1 is given, estimate tau, otherwise fix
+      tau = c / sqrt(d);
+    } else {
+      tau = fixed_tau;
+    }
+
     // Convert precision matrix to covariance matrix (for bx0)
+    matrix[K, K] covariance_matrix[N];
     for (i in 1:N) {
       matrix[K, K] precision_matrix = A - kappa[i] * B;
       covariance_matrix[i] = inverse(precision_matrix);
     }
+
 }
 
 
