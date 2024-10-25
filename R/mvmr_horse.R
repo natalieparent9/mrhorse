@@ -161,7 +161,7 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
                            "SD" = unname(summary(mr.coda)$statistics[sprintf("theta[%i]", 1:K), 2]),
                            "2.5% quantile" = unname(summary(mr.coda)$quantiles[sprintf("theta[%i]", 1:K), 1]),
                            "97.5% quantile" = unname(summary(mr.coda)$quantiles[sprintf("theta[%i]", 1:K), 5]),
-                           "Rhat" = unname(coda::gelman.diag(mr.coda)$psrf[sprintf("theta[%i]", 1:K), 1]))
+                           "Rhat" = unname(coda::gelman.diag(mr.coda[,sprintf("theta[%i]", 1:K)])$psrf[1:K]))
   names(mr_estimate) = c("Parameter", "Estimate", "SD", "2.5% quantile", "97.5% quantile", "Rhat")
   mr_estimate[,-1] = round(mr_estimate[,-1], 3)
 
