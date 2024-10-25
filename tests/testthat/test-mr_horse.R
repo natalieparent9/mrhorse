@@ -1,7 +1,6 @@
 
 # testthat library must be loaded
 
-
 ## Basic tests ####
 
 testthat::test_that("Basic JAGS model runs successfully and produces expected results", {

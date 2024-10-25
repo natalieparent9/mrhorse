@@ -99,19 +99,16 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
   # Ensure at least the results for theta parameter are saved
   variable.names = unique(c("theta", variable.names))
 
-  data_list = list(N=length(D$betaY), by=D$betaY, bx = D$betaX, sy = D$betaYse, sx = D$betaXse)
+  data_list = list(N=length(D$betaY), by=D$betaY, bx = D$betaX, sy = D$betaYse, sx = D$betaXse, fixed_tau = fixed_tau)
 
   # Handling of fixed or estimated tau parameter
-  if (fixed_tau == -1) {  # estimate tau
-    model = 'standard'    # for use in macros to control JAGS model
-  } else {                # fix tau
-    model = 'fixed_tau'
-    data_list$fixed_tau = fixed_tau
-  }
+  model = 'standard'   # estimate tau
+  if (fixed_tau != -1) {model = 'fixed_tau'}
 
   # Fit model
   if (stan == TRUE) {
-    fit = rstan::sampling(stanmodels$mr_horse,
+    fit = rstan::sampling(
+      stanmodels$mr_horse,
                    pars = variable.names,
                    data = data_list,
                    iter = n.iter + n.burnin,

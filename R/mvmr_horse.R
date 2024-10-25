@@ -117,15 +117,11 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
   # Initialize precision/covariance matrix
   Tx = matrix(0, nrow = K, ncol = p * K)
 
-  data_list = list(by = D$betaY, bx = Bx, sy = D$betaYse, Tx = Tx, N = p, K = K, R = diag(K))
+  data_list = list(by = D$betaY, bx = Bx, sy = D$betaYse, Tx = Tx, N = p, K = K, R = diag(K), fixed_tau=fixed_tau)
 
   # Handling of fixed or estimated tau parameter
-  if (fixed_tau == -1) {  # estimate tau
-    model = 'standard'    # for use in macros to control JAGS model
-  } else {                # fix tau
-    model = 'fixed_tau'
-    data_list$fixed_tau = fixed_tau
-  }
+  model = 'standard'   # estimate tau
+  if (fixed_tau != -1) {model = 'fixed_tau'}
 
   cat("Fitting model with ", K, " exposures and ",p, " variants\n", sep='')
 
