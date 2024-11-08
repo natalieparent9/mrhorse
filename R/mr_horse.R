@@ -1,29 +1,37 @@
 
 # JAGS model
-# The function is set up so that different versions of the model can be used depending on which macro is selected
+# The function is set up so that different versions of the model can be used depending on options selected
 # Code corresponding to the macro chosen will be subsituted into the model file, since JAGS models do not allow conditionals within
 
-mr_horse_model_jags = function(fixed_tau) {
+mr_horse_model_jags = function(fixed_tau, omega) {
 
   model = "function() {
     for (i in 1:N){                                # Where N is the number of variants (rows)
-      by[i] ~ dnorm(mu[i], 1/(sy[i] * sy[i]))      # Likelihood for by
-      mu[i] = theta * bx0[i] + alpha[i]            # Mean for bx0 distribution
-      bx[i] ~ dnorm(bx0[i], 1 / (sx[i] * sx[i]))   # Likelihood for bx
+
+      mu[i, 1] = bx0[i]                              # Expected mean of bx distribution
+      mu[i, 2] = theta * bx0[i] + alpha[i]           # Expected mean of by distribution
+      vary[i] = sy[i] * sy[i]                        # Variance of by
+      varx[i] = sx[i] * sx[i]                        # Variance of bx
+      cov[i] = $OMEGA * sx[i] * sy[i]                # Covariance of bx and by
+      precision[i, 1, 1] = vary[i] / (varx[i] * vary[i] - cov[i]^2)    # Precision matrix (inverse of covariance matrix)
+      precision[i, 2, 2] = varx[i] / (varx[i] * vary[i] - cov[i]^2)
+      precision[i, 1, 2] = -cov[i] / (varx[i] * vary[i] - cov[i]^2)
+      precision[i, 2, 1] = precision[i, 1, 2]
+      obs[i, ] ~ dmnorm(mu[i,], precision[i,,])      # Jointly model bx and by likelihood
 
       bx0[i] ~ dnorm(mx0 + (sqrt(vx0)/(tau * phi[i])) * rho[i] * alpha[i], 1 / ((1 - rho[i]^2) * vx0)) # Effect of the variant on the exposure
-      r[i] ~ dbeta(10, 10);T(, 1)                  # Correlation between alpha and bx0
-      rho[i] = 2*r[i] -1                           # Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i].
+      r[i] ~ dbeta(10, 10);T(, 1)                    # Correlation between alpha and bx0
+      rho[i] = 2*r[i] -1                             # Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i].
 
       alpha[i] ~ dnorm(0, 1 / (tau * tau * phi[i] * phi[i]))  # Pleiotropic effects
-      phi[i] = a[i] / sqrt(b[i])                   # Scaling factor for each variant based on parameters a and b
-      a[i] ~ dnorm(0, 1);T(0, )                    # Parameter for phi[i]
-      b[i] ~ dgamma(0.5, 0.5)                      # Parameter for phi[i]
+      phi[i] = a[i] / sqrt(b[i])                     # Scaling factor for each variant based on parameters a and b
+      a[i] ~ dnorm(0, 1);T(0, )                      # Parameter for phi[i]
+      b[i] ~ dgamma(0.5, 0.5)                        # Parameter for phi[i]
     }
 
     c ~ dnorm(0, 1);T(0, )       # Parameter for tau
     d ~ dgamma(0.5, 0.5)         # Parameter for tau
-    $TAU                         # Fixed or estimated depending on macro chosen
+    $TAU                         # Fixed or estimated depending on user specification
 
     vx0 ~ dnorm(0, 1);T(0, )     # Variance for bx0 distribution
     mx0 ~ dnorm(0, 1)            # Mean for bx0 distribution
@@ -32,13 +40,14 @@ mr_horse_model_jags = function(fixed_tau) {
   }"
 
   # Sub in options
-  tau_model = if (fixed_tau == -1) {
+  tau_model = if (fixed_tau == -1) { # uses argument passed to mr_horse function
     'tau = c / sqrt(d)'
   } else {
-    'tau = fixed_tau'
+    'tau = fixed_tau' # the model will find the fixed_tau value as its included in the data list
   }
 
   model = gsub("$TAU", tau_model, model, fixed=TRUE)
+  model = gsub("$OMEGA", omega, model, fixed=TRUE)   # uses argument passed to mr_horse function
   model
 }
 
@@ -57,8 +66,9 @@ mr_horse_model_jags = function(fixed_tau) {
 #' @param n.burnin number of warmup iterations
 #' @param stan fit the model using stan, default is to use JAGS
 #' @param n.cores number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()
-#' @param fixed_tau a fixed value for tau, otherwise tau will be estimated
 #' @param return_fit return the fitted JAGS or Stan model object, default is FALSE
+#' @param fixed_tau a fixed value for tau, otherwise tau will be estimated
+#' @param omega correlation parameter for bx and by, default is 0 which assumes independence
 #'
 #' @return Output from the mr_horse() function is a list that contains:
 #' $MR_Estimate: a data frame with the causal effect estimate (which is the posterior mean), standard deviation (i.e., the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value                                                                                                               the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value
@@ -85,7 +95,8 @@ mr_horse_model_jags = function(fixed_tau) {
 #' # plot(MREx$MR_Coda[,c('theta','tau')])
 #' #
 #'
-mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE, n.cores = parallelly::availableCores(), fixed_tau = -1, return_fit = FALSE){
+mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000,
+                    stan = FALSE, n.cores = parallelly::availableCores(), return_fit = FALSE, fixed_tau = -1, omega = 0){
 
   # Validate data input, accepts data frame, data table, tibble or MRInput object (does not require conversion)
   if (!(is.data.frame(D) | inherits(D, "MRInput"))) stop("Error: D must be a data frame or an MRInput object")
@@ -93,11 +104,13 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
   vars = c('betaX', 'betaY', 'betaXse', 'betaYse')
   if (!(all(vars %in% colnames(D)) | all(vars %in% slotNames(D)))) stop("Error: D must contain columns: betaX, betaY, betaXse, betaYse")
   if (fixed_tau != -1 & fixed_tau < 0) stop('Error: fixed value for tau must be >0')
+  if (!(omega >= -1 && omega <= 1)) stop('Error: omega must be between -1 and 1')
 
   # Ensure at least the results for theta parameter are saved
   variable.names = unique(c("theta", variable.names))
 
-  data_list = list(N=length(D$betaY), by=D$betaY, bx = D$betaX, sy = D$betaYse, sx = D$betaXse, fixed_tau = fixed_tau)
+  data_list = list(N=length(D$betaY), by=D$betaY, bx = D$betaX, sy = D$betaYse, sx = D$betaXse, fixed_tau = fixed_tau,
+                   obs = as.matrix(D[,c('betaX','betaY')], ncol=2))
 
   # Fit model
   if (stan == TRUE) {
@@ -120,7 +133,7 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
                   n.chains = n.chains,
                   n.iter = n.burnin + n.iter,
                   n.burnin = n.burnin,
-                  model.file = eval(parse(text=mr_horse_model_jags(fixed_tau))),
+                  model.file = eval(parse(text=mr_horse_model_jags(fixed_tau, omega))),
                   n.cluster = n.cores)
       mr.coda = coda::as.mcmc(fit)
   } else {
