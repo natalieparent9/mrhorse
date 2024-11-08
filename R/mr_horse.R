@@ -3,8 +3,7 @@
 # The function is set up so that different versions of the model can be used depending on which macro is selected
 # Code corresponding to the macro chosen will be subsituted into the model file, since JAGS models do not allow conditionals within
 
-mr_horse_model_jags = function(f=c('standard', 'fixed_tau')) {
-  f = match.arg(f)
+mr_horse_model_jags = function(fixed_tau) {
 
   model = "function() {
     for (i in 1:N){                                # Where N is the number of variants (rows)
@@ -32,14 +31,14 @@ mr_horse_model_jags = function(f=c('standard', 'fixed_tau')) {
     theta ~ dunif(-10, 10)       # Causal effect of X on Y
   }"
 
-  macros = list(list("$TAU",
-                     switch(f,
-                            standard='tau = c / sqrt(d)',
-                            fixed_tau='tau = fixed_tau')))
-
-  for (m in seq(macros)) {
-    model = gsub(macros[[m]][1], macros[[m]][2], model, fixed=TRUE) # macros[[m]][1] is the name e.g. 'standard' and macros[[m]][2] is corresponding code
+  # Sub in options
+  tau_model = if (fixed_tau == -1) {
+    'tau = c / sqrt(d)'
+  } else {
+    'tau = fixed_tau'
   }
+
+  model = gsub("$TAU", tau_model, model, fixed=TRUE)
   model
 }
 
@@ -93,17 +92,12 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
 
   vars = c('betaX', 'betaY', 'betaXse', 'betaYse')
   if (!(all(vars %in% colnames(D)) | all(vars %in% slotNames(D)))) stop("Error: D must contain columns: betaX, betaY, betaXse, betaYse")
-
   if (fixed_tau != -1 & fixed_tau < 0) stop('Error: fixed value for tau must be >0')
 
   # Ensure at least the results for theta parameter are saved
   variable.names = unique(c("theta", variable.names))
 
   data_list = list(N=length(D$betaY), by=D$betaY, bx = D$betaX, sy = D$betaYse, sx = D$betaXse, fixed_tau = fixed_tau)
-
-  # Handling of fixed or estimated tau parameter
-  model = 'standard'   # estimate tau
-  if (fixed_tau != -1) {model = 'fixed_tau'}
 
   # Fit model
   if (stan == TRUE) {
@@ -120,12 +114,13 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
     mr.coda = rstan::As.mcmc.list(fit)
 
   } else if (stan == FALSE) {
+      if (fixed_tau == -1) data_list$fixed_tau = NULL # avoid warning of unused variable
       fit = R2jags::jags.parallel(data = data_list,
                   parameters.to.save = variable.names,
                   n.chains = n.chains,
                   n.iter = n.burnin + n.iter,
                   n.burnin = n.burnin,
-                  model.file = eval(parse(text=mr_horse_model_jags(model))),
+                  model.file = eval(parse(text=mr_horse_model_jags(fixed_tau))),
                   n.cluster = n.cores)
       mr.coda = coda::as.mcmc(fit)
   } else {

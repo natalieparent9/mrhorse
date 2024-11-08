@@ -1,7 +1,8 @@
 
 #' Univariable example dataset
 #'
-#' Example dataset containing associations between 100 variants and a single exposure variable and an outcome
+#' Example dataset containing association estimates between 100 genetic instruments and a single exposure variable and an outcome, as well as their corresponding standard errors.
+#' This is taken from the first replication of a simulation study, where 20% of variants are pleiotropic, and pleiotropy is balanced.
 #'
 #' @name data_ex
 #' @docType data
@@ -17,7 +18,8 @@
 
 #' Multivariable example dataset
 #'
-#' Example dataset containing associations between 100 variants and two exposure variables and an outcome
+#' Example dataset containing associations between 100 genetic instruments and two exposure variables and an outcome, as well as their corresponding standard errors.
+#' This is taken from a multivariable simulation study, where 20% of variants are pleiotropic, and pleiotropy is balanced.
 #'
 #' @name data_mv_ex
 #' @docType data

@@ -65,6 +65,7 @@ mvmr_horse_model_jags = function(f=c('standard', 'fixed_tau')) {
 #' @return Output from the mr_horse() function is a list that contains:
 #' $MR_Estimate: a data frame with the causal effect estimate (which is the posterior mean), standard deviation (i.e., the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value                                                                                                               the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value
 #  $MR_Coda: full MCMC samples for all parameters in `variable.names`
+#  $Fit: the fitted model object (if reuturn_fit was set to TRUE)
 #' @export
 #'
 #' @examples
