@@ -1,4 +1,7 @@
 
+// Run rstantools::rstan_config() and devtools::load_all() after modifying this file to trigger recompilation
+// In src folder the stanExports_mr_horse.o file should be updated
+
 data {
   int<lower=0> N;           // Number of variants (rows)
   vector[N] by;             // Association between the variants and exposure
@@ -6,6 +9,8 @@ data {
   vector[N] sy;             // Standard errors for by
   vector[N] sx;             // Standard errors for bx
   real<lower=-1> fixed_tau; // Fixed tau value
+  real<lower=-1, upper=1> omega;  // correlation parameter for bx and by
+  matrix[N,2] obs;          // bx and by
 }
 
 parameters {
@@ -24,13 +29,19 @@ parameters {
 transformed parameters {
   vector<lower=0>[N] phi = a ./ sqrt(b);  // Scaling factor for each variant based on parameters a and b
   vector[N] rho = 2 * r - 1;              // Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i]
-  vector[N] mu = theta * bx0 + alpha;     // Computes the mean effect on Y for each variant
+  real<lower=0> tau = c / sqrt(d);        // Controls the global level of shrinkage for alphas
+  if (fixed_tau != -1) tau = fixed_tau;   // If default value of -1 is given, estimate tau, otherwise fix
 
-  real<lower=0> tau;                      // Controls the global level of shrinkage for alphas
-  if (fixed_tau == -1) {                  // If defaul value of -1 is given, estimate tau, otherwise fix
-    tau = c / sqrt(d);
-  } else {
-    tau = fixed_tau;
+  matrix[N,2] mu;                             // Expected means
+  mu[:, 1] = bx0;                             // Expected mean of bx
+  mu[:, 2] = theta * bx0 + alpha;             // Expected mean of by
+
+  cov_matrix[2] Sigma[N];                       // An array of N 2x2 covariance matrices
+  for (i in 1:N) {
+    Sigma[i][1,1] = sx[i];
+    Sigma[i][2,2] = sy[i];
+    Sigma[i][1,2] = omega * sx[i] * sy[i];      // Covariance
+    Sigma[i][2,1] = Sigma[i][1,2];
   }
 }
 
@@ -47,7 +58,7 @@ model {
   vx0 ~ normal(0, 1);
   mx0 ~ normal(0, 1);
 
-  // Likelihood
-  by ~ normal(mu, sy);                         // Likelihood for by (observed beta_y)
-  bx ~ normal(bx0, sx);                        // Likelihood for bx (observed beta_x)
+  for (i in 1:N){
+    obs[i] ~ multi_normal(mu[i], Sigma[i]);   // Jointly model bx and by likelihood
+  }
 }

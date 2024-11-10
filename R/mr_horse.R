@@ -12,7 +12,7 @@ mr_horse_model_jags = function(fixed_tau, omega) {
       mu[i, 2] = theta * bx0[i] + alpha[i]           # Expected mean of by distribution
       vary[i] = sy[i] * sy[i]                        # Variance of by
       varx[i] = sx[i] * sx[i]                        # Variance of bx
-      cov[i] = $OMEGA * sx[i] * sy[i]                # Covariance of bx and by
+      cov[i] = omega * sx[i] * sy[i]                 # Covariance of bx and by
       precision[i, 1, 1] = vary[i] / (varx[i] * vary[i] - cov[i]^2)    # Precision matrix (inverse of covariance matrix)
       precision[i, 2, 2] = varx[i] / (varx[i] * vary[i] - cov[i]^2)
       precision[i, 1, 2] = -cov[i] / (varx[i] * vary[i] - cov[i]^2)
@@ -47,7 +47,6 @@ mr_horse_model_jags = function(fixed_tau, omega) {
   }
 
   model = gsub("$TAU", tau_model, model, fixed=TRUE)
-  model = gsub("$OMEGA", omega, model, fixed=TRUE)   # uses argument passed to mr_horse function
   model
 }
 
@@ -110,7 +109,7 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
   variable.names = unique(c("theta", variable.names))
 
   data_list = list(N=length(D$betaY), by=D$betaY, bx = D$betaX, sy = D$betaYse, sx = D$betaXse, fixed_tau = fixed_tau,
-                   obs = as.matrix(D[,c('betaX','betaY')], ncol=2))
+                   obs = as.matrix(D[,c('betaX','betaY')], ncol=2), omega=omega)
 
   # Fit model
   if (stan == TRUE) {

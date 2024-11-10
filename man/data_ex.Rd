@@ -17,6 +17,7 @@ A data frame with 100 rows and 4 columns:
 data_ex
 }
 \description{
-Example dataset containing associations between 100 variants and a single exposure variable and an outcome
+Example dataset containing association estimates between 100 genetic instruments and a single exposure variable and an outcome, as well as their corresponding standard errors.
+This is taken from the first replication of a simulation study, where 20\% of variants are pleiotropic, and pleiotropy is balanced.
 }
 \keyword{datasets}

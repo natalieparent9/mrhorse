@@ -12,8 +12,9 @@ mr_horse(
   n.burnin = 10000,
   stan = FALSE,
   n.cores = parallelly::availableCores(),
+  return_fit = FALSE,
   fixed_tau = -1,
-  return_fit = FALSE
+  omega = 0
 )
 }
 \arguments{
@@ -31,9 +32,11 @@ mr_horse(
 
 \item{n.cores}{number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()}
 
+\item{return_fit}{return the fitted JAGS or Stan model object, default is FALSE}
+
 \item{fixed_tau}{a fixed value for tau, otherwise tau will be estimated}
 
-\item{return_fit}{return the fitted JAGS or Stan model object, default is FALSE}
+\item{omega}{correlation parameter for bx and by, default is 0 which assumes independence}
 }
 \value{
 Output from the mr_horse() function is a list that contains:
