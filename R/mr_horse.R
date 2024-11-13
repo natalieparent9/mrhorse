@@ -3,21 +3,17 @@
 # The function is set up so that different versions of the model can be used depending on options selected
 # Code corresponding to the macro chosen will be subsituted into the model file, since JAGS models do not allow conditionals within
 
-mr_horse_model_jags = function(fixed_tau, omega) {
-
-  model = "function() {
+mr_horse_model_jags = function() {
     for (i in 1:N){                                # Where N is the number of variants (rows)
 
       mu[i, 1] = bx0[i]                              # Expected mean of bx distribution
       mu[i, 2] = theta * bx0[i] + alpha[i]           # Expected mean of by distribution
-      vary[i] = sy[i] * sy[i]                        # Variance of by
-      varx[i] = sx[i] * sx[i]                        # Variance of bx
-      cov[i] = omega * sx[i] * sy[i]                 # Covariance of bx and by
-      precision[i, 1, 1] = vary[i] / (varx[i] * vary[i] - cov[i]^2)    # Precision matrix (inverse of covariance matrix)
-      precision[i, 2, 2] = varx[i] / (varx[i] * vary[i] - cov[i]^2)
-      precision[i, 1, 2] = -cov[i] / (varx[i] * vary[i] - cov[i]^2)
+
+      precision[i, 1, 1] = sx[i] * sx[i]             # Variance of bx
+      precision[i, 2, 2] = sy[i] * sy[i]             # Variance of by
+      precision[i, 1, 2] = omega * sx[i] * sy[i]     # Covariance of bx and by
       precision[i, 2, 1] = precision[i, 1, 2]
-      obs[i, ] ~ dmnorm(mu[i,], precision[i,,])      # Jointly model bx and by likelihood
+      obs[i, ] ~ dmnorm.vcov(mu[i,], precision[i,,])   # Jointly model bx and by likelihood, .vcov specifies we have provided var covar matrix instead of precision
 
       bx0[i] ~ dnorm(mx0 + (sqrt(vx0)/(tau * phi[i])) * rho[i] * alpha[i], 1 / ((1 - rho[i]^2) * vx0)) # Effect of the variant on the exposure
       r[i] ~ dbeta(10, 10);T(, 1)                    # Correlation between alpha and bx0
@@ -31,23 +27,13 @@ mr_horse_model_jags = function(fixed_tau, omega) {
 
     c ~ dnorm(0, 1);T(0, )       # Parameter for tau
     d ~ dgamma(0.5, 0.5)         # Parameter for tau
-    $TAU                         # Fixed or estimated depending on user specification
+
+    tau = ifelse(fixed_tau == -1, c / sqrt(d), fixed_tau)    # Fixed or estimated depending on user specification
 
     vx0 ~ dnorm(0, 1);T(0, )     # Variance for bx0 distribution
     mx0 ~ dnorm(0, 1)            # Mean for bx0 distribution
 
     theta ~ dunif(-10, 10)       # Causal effect of X on Y
-  }"
-
-  # Sub in options
-  tau_model = if (fixed_tau == -1) { # uses argument passed to mr_horse function
-    'tau = c / sqrt(d)'
-  } else {
-    'tau = fixed_tau' # the model will find the fixed_tau value as its included in the data list
-  }
-
-  model = gsub("$TAU", tau_model, model, fixed=TRUE)
-  model
 }
 
 
@@ -108,8 +94,8 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
   # Ensure at least the results for theta parameter are saved
   variable.names = unique(c("theta", variable.names))
 
-  data_list = list(N=length(D$betaY), by=D$betaY, bx = D$betaX, sy = D$betaYse, sx = D$betaXse, fixed_tau = fixed_tau,
-                   obs = as.matrix(D[,c('betaX','betaY')], ncol=2), omega=omega)
+  data_list = list(N=length(D$betaY), obs = as.matrix(D[,c('betaX','betaY')],ncol=2), sy = D$betaYse, sx = D$betaXse,
+                   fixed_tau = fixed_tau, omega=omega)
 
   # Fit model
   if (stan == TRUE) {
@@ -126,13 +112,12 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
     mr.coda = rstan::As.mcmc.list(fit)
 
   } else if (stan == FALSE) {
-      if (fixed_tau == -1) data_list$fixed_tau = NULL # avoid warning of unused variable
       fit = R2jags::jags.parallel(data = data_list,
                   parameters.to.save = variable.names,
                   n.chains = n.chains,
                   n.iter = n.burnin + n.iter,
                   n.burnin = n.burnin,
-                  model.file = eval(parse(text=mr_horse_model_jags(fixed_tau, omega))),
+                  model.file = mr_horse_model_jags,
                   n.cluster = n.cores)
       mr.coda = coda::as.mcmc(fit)
   } else {
