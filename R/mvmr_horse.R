@@ -2,14 +2,13 @@
 
 # JAGS model
 
-mvmr_horse_model_jags = function(f=c('standard', 'fixed_tau')) {
-  f = match.arg(f)
+mvmr_horse_model_jags = function(fixed_tau) {
 
   model = "function() {
     for (i in 1:N){                                                   # number of variants (rows)
       by[i] ~ dnorm(mu[i], 1 / (sy[i] * sy[i]))                       # Association between the exposures and outcome
       mu[i] = inprod(bx0[i, 1:K], theta) + alpha[i]                   # Mean effect on Y for each variant
-      bx[i,1:K] ~ dmnorm(bx0[i,1:K], Tx[1:K, ((i-1)*K+1):(i*K)])      # Association between the variants and exposures
+      bx[i,1:K] ~ dmnorm(bx0[i,1:K], Tx[i, ,])      # Association between the variants and exposures
 
       kappa[i] = (rho[i]^2 / (1 + K*rho[i]^2))                        # Used to adjust bx0
       bx0[i,1:K] ~ dmnorm(mx + sx0 * rho[i] * alpha[i] / (phi[i] * tau), A - kappa[i] * B) # Latent effect of the variants on the exposures
@@ -38,14 +37,14 @@ mvmr_horse_model_jags = function(f=c('standard', 'fixed_tau')) {
     }
   }
   "
-  macros = list(list("$TAU",
-               switch(f,
-                      standard='tau = c / sqrt(d)',
-                      fixed_tau='tau = fixed_tau')))
-
-  for (m in seq(macros)) {
-    model = gsub(macros[[m]][1], macros[[m]][2], model, fixed=TRUE) # macros[[m]][1] is the name e.g. 'standard' and macros[[m]][2] is corresponding code
+  # Sub in options
+  tau_model = if (fixed_tau == -1) { # uses argument passed to mr_horse function
+    'tau = c / sqrt(d)'
+  } else {
+    'tau = fixed_tau' # the model will find the fixed_tau value as its included in the data list
   }
+
+  model = gsub("$TAU", tau_model, model, fixed=TRUE)
   model
 }
 
@@ -86,14 +85,14 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
 
   # Validate input
   if (is.data.frame(D)) {                        # accepts data.frame, tibble, data.table
-    p = dim(D)[1]                                # number of variants (rows)
+    N = dim(D)[1]                                # number of variants (rows)
     K = sum(grepl("^betaX[0-9]+$", names(D)))    # number of exposures
 
     Bx = D[, sprintf("betaX%i", 1:K)]            # dataframe of associations with exposures
     Sx = D[, sprintf("betaX%ise", 1:K)]          # dataframe of standard errors of associations with exposures
 
   } else if (inherits(D, "MRMVInput")) {         # If D is an MRMVInput object
-    p = length(D@betaY)                          # number of variants (rows)
+    N = length(D@betaY)                          # number of variants (rows)
     K = length(D@betaX[,1])                      # number of exposures
 
     Bx = as.data.frame(D@betaX[1:K,1])           # dataframe of associations with exposures
@@ -115,19 +114,15 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
   # Ensure at least the results for theta parameter are saved
   variable.names = unique(c("theta", variable.names))
 
-  # Initialize precision/covariance matrix
-  Tx = matrix(0, nrow = K, ncol = p * K)
+  # Initialize precision/covariance array - contains N KxK matrices, a matrix for each instrument, jags uses precision, stan uses covariance matrix
+  Tx = array(0, dim = c(N, K, K))
 
-  data_list = list(by = D$betaY, bx = Bx, sy = D$betaYse, Tx = Tx, N = p, K = K, R = diag(K), fixed_tau=fixed_tau)
+  data_list = list(by = D$betaY, bx = Bx, sy = D$betaYse, Tx = Tx, N = N, K = K, R = diag(K), fixed_tau=fixed_tau)
 
-  # Handling of fixed or estimated tau parameter
-  model = 'standard'   # estimate tau
-  if (fixed_tau != -1) {model = 'fixed_tau'}
-
-  cat("Fitting model with ", K, " exposures and ",p, " variants\n", sep='')
+  cat("Fitting model with ", K, " exposures and ", N, " variants\n", sep='')
 
   if (stan == TRUE) {  # Run using Stan
-    for (j in 1:p) {data_list$Tx[, ((j-1)*K+1):(j*K)] = diag(Sx[j, ]^2)} # fill covariance matrix
+    for (i in 1:N) {data_list$Tx[i, , ] = diag(Sx[i, ]^2)} # fill covariance matrix
     fit = rstan::sampling(stanmodels$mvmr_horse,
                         data = data_list,
                         pars = variable.names,
@@ -141,9 +136,9 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
     mr.coda = rstan::As.mcmc.list(fit)
 
   } else if (stan == FALSE) {  # Run using JAGS
-    for (j in 1:p) {data_list$Tx[, ((j-1)*K+1):(j*K)] = diag(1 / Sx[j, ]^2)}   # fill precision matrix
+    for (i in 1:N) {data_list$Tx[i, , ] = diag(1 / Sx[i, ]^2)}   # fill precision matrix
     fit = R2jags::jags.parallel(data = data_list,
-                                     model.file = eval(parse(text=mvmr_horse_model_jags(model))),
+                                     model.file = eval(parse(text=mvmr_horse_model_jags(fixed_tau))),
                                      parameters.to.save = variable.names,
                                      n.chains = n.chains,
                                      n.iter = n.burnin + n.iter,

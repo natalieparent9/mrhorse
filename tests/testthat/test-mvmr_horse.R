@@ -23,6 +23,7 @@ testthat::test_that("Basic multivariable JAGS model runs successfully and produc
     Rhat = c(1.007, 1.001),
     check.names = FALSE
   ))
+  print(result$MR_Estimate)
 })
 
 
@@ -78,6 +79,7 @@ testthat::test_that("Multivariable JAGS model with fixed tau runs successfully a
     Rhat = c(1.003, 1.000),
     check.names = FALSE
   ))
+  print(result$MR_Estimate)
 })
 
 

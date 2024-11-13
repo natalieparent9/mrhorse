@@ -45,7 +45,6 @@ transformed parameters {
 
 }
 
-
 model {
     for (i in 1:N) {
         // Likelihood
