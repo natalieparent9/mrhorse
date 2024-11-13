@@ -113,3 +113,26 @@ testthat::test_that("Multivariable Stan model with fixed tau runs successfully a
   ))
 })
 
+## Non zero omega tests ####
+
+testthat::test_that("Multivariable JAGS model runs successfully and produces expected results with non zero omega", {
+  set.seed(100)
+  # Run the model
+  result = mvmr_horse(D = data_mv_ex, n.iter = 1000, n.burnin = 500, omega = 0.1)
+
+  expect_type(result, "list")
+  expect_named(result, c("MR_Estimate", "MR_Coda"))
+  expect_s3_class(result$MR_Coda, "mcmc.list")
+
+  # Check estimates match expected
+  expect_equal(result$MR_Estimate, data.frame(
+    Parameter = c("theta[1]", "theta[2]"),
+    Estimate = c(0.100, 0.104),
+    SD = c(0.018, 0.018),
+    `2.5% quantile` = c(0.065, 0.069),
+    `97.5% quantile` = c(0.135, 0.140),
+    Rhat = c(1.007, 1.001),
+    check.names = FALSE
+  ))
+  print(result$MR_Estimate)
+})

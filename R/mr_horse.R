@@ -9,11 +9,11 @@ mr_horse_model_jags = function() {
       mu[i, 1] = bx0[i]                              # Expected mean of bx distribution
       mu[i, 2] = theta * bx0[i] + alpha[i]           # Expected mean of by distribution
 
-      precision[i, 1, 1] = sx[i] * sx[i]             # Variance of bx
-      precision[i, 2, 2] = sy[i] * sy[i]             # Variance of by
-      precision[i, 1, 2] = omega * sx[i] * sy[i]     # Covariance of bx and by
-      precision[i, 2, 1] = precision[i, 1, 2]
-      obs[i, ] ~ dmnorm.vcov(mu[i,], precision[i,,])   # Jointly model bx and by likelihood, .vcov specifies we have provided var covar matrix instead of precision
+      cov[i, 1, 1] = sx[i] * sx[i]             # Variance of bx
+      cov[i, 2, 2] = sy[i] * sy[i]             # Variance of by
+      cov[i, 1, 2] = omega * sx[i] * sy[i]     # Covariance of bx and by
+      cov[i, 2, 1] = cov[i, 1, 2]
+      obs[i, ] ~ dmnorm.vcov(mu[i,], cov[i,,])   # Jointly model bx and by likelihood, .vcov specifies we have provided var covar matrix instead of precision
 
       bx0[i] ~ dnorm(mx0 + (sqrt(vx0)/(tau * phi[i])) * rho[i] * alpha[i], 1 / ((1 - rho[i]^2) * vx0)) # Effect of the variant on the exposure
       r[i] ~ dbeta(10, 10);T(, 1)                    # Correlation between alpha and bx0
