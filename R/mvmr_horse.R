@@ -116,8 +116,14 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
   # Ensure at least the results for theta parameter are saved
   variable.names = unique(c("theta", variable.names))
 
-  data_list = list(obs = as.matrix(D[, c(sprintf("betaX%i", 1:K), 'betaY')], ncol=2), sx = Sx, sy = D$betaYse, N = N, K = K, R = diag(K),
-                   fixed_tau=fixed_tau, omega=omega)
+  data_list = list(obs = as.matrix(D[, c(sprintf("betaX%i", 1:K), 'betaY')], ncol=2),
+                   sx = Sx,
+                   sy = D$betaYse,
+                   N = N,
+                   K = K,
+                   R = diag(K),
+                   fixed_tau=fixed_tau,
+                   omega=omega)
 
   cat("Fitting model with ", K, " exposures and ", N, " variants\n", sep='')
 

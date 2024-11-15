@@ -94,8 +94,14 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
   # Ensure at least the results for theta parameter are saved
   variable.names = unique(c("theta", variable.names))
 
-  data_list = list(N=length(D$betaY), obs = as.matrix(D[,c('betaX','betaY')],ncol=2), sy = D$betaYse, sx = D$betaXse,
-                   fixed_tau = fixed_tau, omega=omega)
+  data_list = list(
+    N = length(D$betaY),                                 # Number of genetic instruments
+    obs = as.matrix(D[,c('betaX','betaY')],ncol=2),      # Observed bx and by
+    sy = D$betaYse,                                      # Standard error of by
+    sx = D$betaXse,                                      # Standard error of bx
+    fixed_tau = fixed_tau,                               # Fixed tau value or default -1
+    omega=omega                                          # Correlation parameter for bx and by
+  )
 
   # Fit model
   if (stan == TRUE) {
