@@ -40,7 +40,25 @@ testthat::test_that("Basic Stan model runs successfully and produces expected ou
   print(result$MR_Estimate)
 })
 
-## TODO: add test for MRInput
+
+## Test for MRInput ####
+
+testthat::test_that("Basic JAGS model runs successfully and produces expected results with MRInput", {
+  data = MendelianRandomization::mr_input(bx = data_ex$betaX, by = data_ex$betaY,
+                                        bxse = data_ex$betaXse, byse = data_ex$betaYse)
+  set.seed(100)
+  # Run the model
+  result = mr_horse(D = data, n.iter = 1000, n.burnin = 500)
+
+  # Ensure the model returns a list with expected elements
+  expect_type(result, "list")
+  expect_named(result, c("MR_Estimate", "MR_Coda"))
+  expect_s3_class(result$MR_Coda, "mcmc.list")
+
+  # Check estimates match expected
+  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.098, "SD"=0.018, "2.5% quantile"=0.064, "97.5% quantile"=0.134, "Rhat"=1.002, check.names = FALSE))
+  print(result$MR_Estimate)
+})
 
 
 

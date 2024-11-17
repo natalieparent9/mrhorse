@@ -37,8 +37,8 @@ transformed parameters {
 
   cov_matrix[2] Sigma[N];                     // An array of N 2x2 covariance matrices
   for (i in 1:N) {
-    Sigma[i][1,1] = square(sx[i]);
-    Sigma[i][2,2] = square(sy[i]);
+    Sigma[i][1,1] = square(sx[i]);            // Variance bx
+    Sigma[i][2,2] = square(sy[i]);            // Variance by
     Sigma[i][1,2] = omega * sx[i] * sy[i];    // Covariance
     Sigma[i][2,1] = Sigma[i][1,2];
   }

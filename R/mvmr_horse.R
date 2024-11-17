@@ -3,22 +3,19 @@
 # JAGS model
 
 mvmr_horse_model_jags = function() {
-  for (i in 1:N){                                             # Number of variants (rows)
+  for (i in 1:N){                                                   # Number of variants (rows)
+
     for (k in 1:K) {
-      mu[i,k] = bx0[i,k]                                      # Expected mean of exposures (bxs)
-
+      mu[i,k] = bx0[i,k]                                            # Expected mean of exposures (bxs)
       # Create an array of N K+1xK+1 matrices, each variant has a K+1xK+1 matrix
-      for (j in 1:K) {                                        # Fills KxK diagonal with variance of bxs and off diagonal with 0
-        cov[i, k, j] = ifelse(k == j, sx[i,k] * sx[i,k], 0)
-      }
-      cov[i, k, K+1] =  omega * sx[i,k] * sy[i]               # Covariance between bxs and by - last column of matrix
-      cov[i, K+1, k] =  cov[i, k, K+1]                        # Covariance between bxs and by - last row of matrix
+      for (j in 1:K) cov[i, k, j] = ifelse(k == j, sx[i,k] * sx[i,k], 0) # Fills KxK diagonal with variance of bxs and off diagonal with 0
+      cov[i, k, K+1] =  omega * sx[i,k] * sy[i]                     # Covariance between bxs and by - last column of matrix
+      cov[i, K+1, k] =  cov[i, k, K+1]                              # Covariance between bxs and by - last row of matrix
     }
-    cov[i, K+1, K+1] = sy[i] * sy[i]                          # Inserts var of by of by into last diagonal element
-    mu[i, K+1] = inprod(bx0[i, 1:K], theta) + alpha[i]        # Expected mean of by
+    cov[i, K+1, K+1] = sy[i] * sy[i]                                # Inserts var of by into last diagonal element
+    mu[i, K+1] = inprod(bx0[i, 1:K], theta) + alpha[i]              # Expected mean of by
 
-    obs[i,] ~ dmnorm.vcov(mu[i,], cov[i,,])                   # Jointly model bxs and by
-
+    obs[i,] ~ dmnorm.vcov(mu[i,], cov[i,,])                         # Jointly model bxs and by
 
     kappa[i] = (rho[i]^2 / (1 + K*rho[i]^2))                        # Used to adjust bx0
     bx0[i,1:K] ~ dmnorm(mx + sx0 * rho[i] * alpha[i] / (phi[i] * tau), A - kappa[i] * B) # Latent effect of the variants on the exposures
@@ -33,7 +30,7 @@ mvmr_horse_model_jags = function() {
   c ~ dnorm(0, 1);T(0, )                                            # Parameter for tau
   d ~ dgamma(0.5, 0.5)                                              # Parameter for tau
 
-  tau = ifelse(fixed_tau == -1, c / sqrt(d), fixed_tau)    # Fixed or estimated depending on user specification                                                            # Controls the global level of shrinkage for alphas
+  tau = ifelse(fixed_tau == -1, c / sqrt(d), fixed_tau)             # Fixed or estimated depending on user specification                                                            # Controls the global level of shrinkage for alphas
 
   mx ~ dmnorm(rep(0, K), R[,])
 
@@ -42,8 +39,8 @@ mvmr_horse_model_jags = function() {
     sx0[k] = sqrt(vx0[k])                    # Standard error for bx0 distribution
     theta[k] ~ dunif(-10, 10)                # Causal effect of X[k] on Y
     for (j in 1:K){
-    A[j, k] = ifelse(j==k, 1/vx0[j], 0)    # Precision matrix
-    B[j, k] = 1 / (sx0[j] * sx0[k])        # Covariance matrix
+    A[j, k] = ifelse(j==k, 1/vx0[j], 0)      # Precision matrix
+    B[j, k] = 1 / (sx0[j] * sx0[k])          # Covariance matrix
     }
   }
 }
@@ -85,45 +82,32 @@ mvmr_horse_model_jags = function() {
 mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE, n.cores = parallelly::availableCores(), return_fit = FALSE, fixed_tau = -1, omega=0){
 
   # Validate input
-  if (is.data.frame(D)) {                        # accepts data.frame, tibble, data.table
-    N = dim(D)[1]                                # number of variants (rows)
-    K = sum(grepl("^betaX[0-9]+$", names(D)))    # number of exposures
+  if (!(is.data.frame(D) | inherits(D, "MRMVInput"))) stop("Error: D must be a data frame or an MRInput object")
 
-    Bx = D[, sprintf("betaX%i", 1:K)]            # dataframe of associations with exposures
-    Sx = D[, sprintf("betaX%ise", 1:K)]          # dataframe of standard errors of associations with exposures
+  # Convert MVRInput to data frame
+  if (inherits(D, "MRMVInput")) D = data.frame(betaY = D@betaY, betaYse = D@betaYse, D@betaX, D@betaXse)
 
+  # Dimension parameters
+  N = dim(D)[1]                                # number of variants (rows)
+  K = sum(grepl("^betaX[0-9]+$", names(D)))    # number of exposures
 
-  } else if (inherits(D, "MRMVInput")) {         # If D is an MRMVInput object
-    N = length(D@betaY)                          # number of variants (rows)
-    K = length(D@betaX[,1])                      # number of exposures
-
-    Bx = as.data.frame(D@betaX[1:K,1])           # dataframe of associations with exposures
-    colnames(Bx) = paste0("betaX", 1:K)
-    Sx = as.data.frame(D@betaXse[1:K,1])         # dataframe of standard errors of associations with exposures
-    colnames(Sx) = paste0("betaX", 1:K, 'se')
-
-  } else {
-    stop("Error: D must be a data frame or an MRMVInput object.")
-  }
-
+  # Validate input
   if (K < 2) stop("Error: Dataset must contain at least two exposures")
-  if (!all(c('betaY','betaYse') %in% colnames(D)) & !all(c('betaY','betaYse') %in% slotNames(D))) {
-    stop("Error: betaY and/or betaYse are missing")
-  }
-
+  if (!all(c('betaY','betaYse') %in% colnames(D))) stop("Error: betaY and/or betaYse are missing")
   if (fixed_tau != -1 & fixed_tau < 0) stop('Error: fixed value for tau must be >0')
+  if (!(omega >= -1 && omega <= 1)) stop('Error: omega must be between -1 and 1')
 
   # Ensure at least the results for theta parameter are saved
   variable.names = unique(c("theta", variable.names))
 
   data_list = list(obs = as.matrix(D[, c(sprintf("betaX%i", 1:K), 'betaY')], ncol=2),
-                   sx = Sx,
+                   sx = D[, sprintf("betaX%ise", 1:K)],
                    sy = D$betaYse,
                    N = N,
                    K = K,
                    R = diag(K),
-                   fixed_tau=fixed_tau,
-                   omega=omega)
+                   fixed_tau = fixed_tau,
+                   omega = omega)
 
   cat("Fitting model with ", K, " exposures and ", N, " variants\n", sep='')
 
@@ -150,11 +134,9 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
                                      n.cluster = n.cores,
                                      n.thin = 1)                # remove thinning that occurs by default
     mr.coda = coda::as.mcmc(fit)
-
   } else {
       stop("Error: invalid input for argument stan, must be TRUE or FALSE")
   }
-
 
   mr_estimate = data.frame("Parameter" = sprintf("theta[%i]", 1:K),
                            "Estimate" = unname(summary(mr.coda)$statistics[sprintf("theta[%i]", 1:K), 1]),

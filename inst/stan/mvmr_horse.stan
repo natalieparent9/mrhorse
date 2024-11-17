@@ -6,7 +6,7 @@ data {
     int<lower=1> N;                    // Number of variants (rows)
     int<lower=1> K;                    // Number of exposures
     matrix[N,K+1] obs;                 // Observed bx and by
-    matrix[N,K] sx;                      // Standard errors for bx
+    matrix[N,K] sx;                    // Standard errors for bx
     vector[N] sy;                      // Standard errors for by
     // matrix[K, K*N] Tx;                 // Covariance matrix for bx
     matrix[K, K] R;                    // Prior precision matrix for mx, diagonal of 1s
