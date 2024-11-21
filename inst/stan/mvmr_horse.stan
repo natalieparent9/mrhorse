@@ -6,19 +6,16 @@ data {
     int<lower=1> N;                    // Number of variants (rows)
     int<lower=1> K;                    // Number of exposures
     matrix[N,K+1] obs;                 // Observed bx and by
-    matrix[N,K] sx;                    // Standard errors for bx
-    vector[N] sy;                      // Standard errors for by
-    // matrix[K, K*N] Tx;                 // Covariance matrix for bx
-    matrix[K, K] R;                    // Prior precision matrix for mx, diagonal of 1s
+    matrix[K+1,K+1] V[N];              // Variance covariance matrix for bxs & by
+    matrix[K, K] R;                    // Prior precision matrix for mx, identity
     real<lower=-1> fixed_tau;          // Fixed tau value
-    real<lower=-1, upper=1> omega;     // Correlation parameter for bx and by
 }
 
 parameters {
     matrix[N, K] bx0;                  // Latent effect of the variants on the exposures
     vector[K] theta;                   // Causal effect of X[k] on Y
     vector[N] alpha;                   // Pleiotropic effects on the outcome
-    vector<lower=0, upper=1>[N] r;     // Correlation between alpha and bx0
+    vector<lower=-1, upper=1>[N] r;    // Correlation between alpha and bx0
     vector<lower=0>[N] a;              // Parameter for phi[i]
     vector<lower=0>[N] b;              // Parameter for phi[i]
     real<lower=0> c;                   // Parameter for tau
@@ -36,29 +33,18 @@ transformed parameters {
     real<lower=0> tau = c / sqrt(d);                           // Controls the global level of shrinkage for alphas
     if (fixed_tau != -1) tau = fixed_tau;                      // If default value of -1 is given, estimate tau, otherwise fix
     matrix[K, K] precision_matrix[N];
+    matrix[N,K+1] mu;                                          // Expected means
     for (i in 1:N) {
       precision_matrix[i] = A - kappa[i] * B;
-    }
-
-    matrix[N,K+1] mu;                                      // Expected means
-    cov_matrix[K+1] Sigma[N];                              // An array of N K+1xK+1 covariance matrices
-    for (i in 1:N) {
-      Sigma[i] = rep_matrix(0, K+1, K+1);                  // First fill with zeroes
-      for (k in 1:K) {
-        mu[i,k] = bx0[i,k];                                // Expected mean of bxs
-        Sigma[i][k,k] = square(sx[i,k]);                   // Variance of bx[k]
-        Sigma[i][k,K+1] = omega * sx[i,k] * sy[i];         // Covariance
-        Sigma[i][K+1,k] = Sigma[i][k,K+1];
-      }
-      Sigma[i][K+1,K+1] = square(sy[i]);                   // Last diagonal element, var of by
-      mu[i, K+1] = dot_product(bx0[i], theta) + alpha[i];  // Expected mean of by
+      for (k in 1:K) mu[i,k] = bx0[i,k];                      // Expected mean of bxs
+      mu[i, K+1] = dot_product(bx0[i], theta) + alpha[i];     // Expected mean of by
     }
 }
 
 model {
     for (i in 1:N) {
         // Likelihood
-        obs[i] ~ multi_normal(mu[i], Sigma[i]);
+        obs[i] ~ multi_normal(mu[i], V[i]);
 
         // Priors
         alpha[i] ~ normal(0, tau * phi[i]);
@@ -67,7 +53,6 @@ model {
         a[i] ~ normal(0, 1);
         b[i] ~ gamma(0.5, 0.5);
     }
-
     // Priors
     c ~ normal(0, 1);
     d ~ gamma(0.5, 0.5);

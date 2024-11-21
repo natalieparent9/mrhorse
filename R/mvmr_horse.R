@@ -2,24 +2,19 @@
 
 # JAGS model
 
+# change n back to j
+
 mvmr_horse_model_jags = function() {
   for (i in 1:N){                                                   # Number of variants (rows)
 
-    for (k in 1:K) {
-      mu[i,k] = bx0[i,k]                                            # Expected mean of exposures (bxs)
-      # Create an array of N K+1xK+1 matrices, each variant has a K+1xK+1 matrix
-      for (j in 1:K) cov[i, k, j] = ifelse(k == j, sx[i,k] * sx[i,k], 0) # Fills KxK diagonal with variance of bxs and off diagonal with 0
-      cov[i, k, K+1] =  omega * sx[i,k] * sy[i]                     # Covariance between bxs and by - last column of matrix
-      cov[i, K+1, k] =  cov[i, k, K+1]                              # Covariance between bxs and by - last row of matrix
-    }
-    cov[i, K+1, K+1] = sy[i] * sy[i]                                # Inserts var of by into last diagonal element
+    for (k in 1:K) mu[i,k] = bx0[i,k]                               # Expected mean of exposures (bxs)
     mu[i, K+1] = inprod(bx0[i, 1:K], theta) + alpha[i]              # Expected mean of by
 
-    obs[i,] ~ dmnorm.vcov(mu[i,], cov[i,,])                         # Jointly model bxs and by
+    obs[i,] ~ dmnorm.vcov(mu[i,], V[,,i])                           # Jointly model bxs and by
 
     kappa[i] = (rho[i]^2 / (1 + K*rho[i]^2))                        # Used to adjust bx0
     bx0[i,1:K] ~ dmnorm(mx + sx0 * rho[i] * alpha[i] / (phi[i] * tau), A - kappa[i] * B) # Latent effect of the variants on the exposures
-    r[i] ~ dbeta(10, 10);T(, 1)                                     # Correlation between alpha and bx0
+    r[i] ~ dbeta(10, 10);T(-1, 1)                                   # Correlation between alpha and bx0
     rho[i] = 2*r[i] -1                                              # Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i]
     alpha[i] ~ dnorm(0, 1 / (tau * tau * phi[i] * phi[i]))          # Pleiotropic effects on the outcome
     phi[i] = a[i] / sqrt(b[i])                                      # Scaling factor for each variant based on parameters a and b
@@ -53,11 +48,11 @@ mvmr_horse_model_jags = function() {
 #' @param variable.names Parameters to save estimates for, in addition to theta
 #' @param n.iter Number of iterations (not including warmup)
 #' @param n.burnin Number of warmup iterations
-#' @param stan fit the model using stan, default is to use JAGS
+#' @param stan Fit the model using stan, default is to use JAGS
 #' @param n.cores Number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()
-#' @param return_fit return the fitted JAGS or Stan model object, default is FALSE
-#' @param fixed_tau a fixed value for tau, otherwise tau will be estimated
-#' @param omega correlation parameter for bx and by, default is 0 which assumes independence
+#' @param return_fit Return the fitted JAGS or Stan model object, default is FALSE
+#' @param fixed_tau Optional fixed value for tau, otherwise tau will be estimated
+#' @param omega Optional vector of correlation parameters for for each betaX-betaY pairing (in order of X1Y, X2Y..). E.g. omega = c(0, 0.1, 0.1). Or a single value can be provided to use for all omegas. Default assumes independence (omega=0)
 #'
 #' @return Output from the mr_horse() function is a list that contains:
 #' $MR_Estimate: a data frame with the causal effect estimate (which is the posterior mean), standard deviation (i.e., the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value                                                                                                               the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value
@@ -95,19 +90,27 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
   if (K < 2) stop("Error: Dataset must contain at least two exposures")
   if (!all(c('betaY','betaYse') %in% colnames(D))) stop("Error: betaY and/or betaYse are missing")
   if (fixed_tau != -1 & fixed_tau < 0) stop('Error: fixed value for tau must be >0')
-  if (!(omega >= -1 && omega <= 1)) stop('Error: omega must be between -1 and 1')
+
+  # Omega handling
+  if (omega == 0) omega = diag(1, nrow=K+1, ncol=K+1)
+
+
+  # Create covariance matrix V
+  V = array(0, c(K+1,K+1,N))
+  for (i in 1:N) {
+    S = diag(D[i, c(sprintf("betaX%ise", 1:K), 'betaYse')], nrow = K+1, ncol=K+1)
+    V[,,i] = S * omega * S
+  }
 
   # Ensure at least the results for theta parameter are saved
   variable.names = unique(c("theta", variable.names))
 
   data_list = list(obs = as.matrix(D[, c(sprintf("betaX%i", 1:K), 'betaY')], ncol=2),
-                   sx = D[, sprintf("betaX%ise", 1:K)],
-                   sy = D$betaYse,
+                   V = V,
                    N = N,
                    K = K,
                    R = diag(K),
-                   fixed_tau = fixed_tau,
-                   omega = omega)
+                   fixed_tau = fixed_tau)
 
   cat("Fitting model with ", K, " exposures and ", N, " variants\n", sep='')
 

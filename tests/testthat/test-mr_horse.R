@@ -4,9 +4,9 @@
 ## Basic tests ####
 
 testthat::test_that("Basic JAGS model runs successfully and produces expected results", {
-  set.seed(100)
+  set.seed(20230531)
   # Run the model
-  result = mr_horse(D = data_ex, n.iter = 1000, n.burnin = 500)
+  result = mr_horse(D = data_ex)
 
   # Ensure the model returns a list with expected elements
   expect_type(result, "list")
@@ -14,7 +14,7 @@ testthat::test_that("Basic JAGS model runs successfully and produces expected re
   expect_s3_class(result$MR_Coda, "mcmc.list")
 
   # Check estimates match expected
-  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.098, "SD"=0.018, "2.5% quantile"=0.063, "97.5% quantile"=0.135, "Rhat"=1.002, check.names = FALSE))
+  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.097, "SD"=0.018, "2.5% quantile"=0.063, "97.5% quantile"=0.132, "Rhat"=1.001, check.names = FALSE))
   print(result$MR_Estimate)
 })
 

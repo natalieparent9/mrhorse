@@ -6,10 +6,8 @@
 data {
   int<lower=0> N;                 // Number of variants (rows)
   matrix[N,2] obs;                // Observed bx and by
-  vector[N] sy;                   // Standard errors for by
-  vector[N] sx;                   // Standard errors for bx
+  matrix[2,2] V[N];               // Variance covariance matrix for bx by
   real<lower=-1> fixed_tau;       // Fixed tau value
-  real<lower=-1, upper=1> omega;  // correlation parameter for bx and by
 }
 
 parameters {
@@ -18,7 +16,7 @@ parameters {
   vector[N] bx0;                  // Latent effect of the variant on the exposure
   vector<lower=0>[N] a;           // Parameter for phi[i]
   vector<lower=0>[N] b;           // Parameter for phi[i]
-  vector<lower=0, upper=1>[N] r;  // Correlation between alpha and bx0
+  vector<lower=-1, upper=1>[N] r; // Correlation between alpha and bx0
   real<lower=0> c;                // Parameter for tau
   real<lower=0> d;                // Parameter for tau
   real<lower=0> vx0;              // Variance for bx0 distribution
@@ -34,14 +32,6 @@ transformed parameters {
   matrix[N,2] mu;                             // Expected means
   mu[:, 1] = bx0;                             // Expected mean of bx
   mu[:, 2] = theta * bx0 + alpha;             // Expected mean of by
-
-  cov_matrix[2] Sigma[N];                     // An array of N 2x2 covariance matrices
-  for (i in 1:N) {
-    Sigma[i][1,1] = square(sx[i]);            // Variance bx
-    Sigma[i][2,2] = square(sy[i]);            // Variance by
-    Sigma[i][1,2] = omega * sx[i] * sy[i];    // Covariance
-    Sigma[i][2,1] = Sigma[i][1,2];
-  }
 }
 
 model {
@@ -58,6 +48,6 @@ model {
   mx0 ~ normal(0, 1);
 
   for (i in 1:N){
-    obs[i] ~ multi_normal(mu[i], Sigma[i]);   // Jointly model bx and by likelihood
+    obs[i] ~ multi_normal(mu[i], V[i]);   // Jointly model bx and by likelihood
   }
 }

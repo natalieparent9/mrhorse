@@ -8,14 +8,10 @@ mr_horse_model_jags = function() {
       mu[i, 1] = bx0[i]                              # Expected mean of bx distribution
       mu[i, 2] = theta * bx0[i] + alpha[i]           # Expected mean of by distribution
 
-      cov[i, 1, 1] = sx[i] * sx[i]                   # Variance of bx
-      cov[i, 2, 2] = sy[i] * sy[i]                   # Variance of by
-      cov[i, 1, 2] = omega * sx[i] * sy[i]           # Covariance of bx and by
-      cov[i, 2, 1] = cov[i, 1, 2]
-      obs[i, ] ~ dmnorm.vcov(mu[i,], cov[i,,])       # Jointly model bx and by likelihood, .vcov specifies we have provided var covar matrix instead of precision
+      obs[i, ] ~ dmnorm.vcov(mu[i,], V[,,i])         # Jointly model bx and by likelihood, .vcov specifies we have provided var covar matrix instead of precision
 
       bx0[i] ~ dnorm(mx0 + (sqrt(vx0)/(tau * phi[i])) * rho[i] * alpha[i], 1 / ((1 - rho[i]^2) * vx0)) # Effect of the variant on the exposure
-      r[i] ~ dbeta(10, 10);T(, 1)                    # Correlation between alpha and bx0
+      r[i] ~ dbeta(10, 10);T(-1, 1)                  # Correlation between alpha and bx0
       rho[i] = 2*r[i] -1                             # Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i].
 
       alpha[i] ~ dnorm(0, 1 / (tau * tau * phi[i] * phi[i]))  # Pleiotropic effects
@@ -43,16 +39,16 @@ mr_horse_model_jags = function() {
 #'
 #' Causal effect estimation is performed in a Bayesian framework using a horseshoe shrinkage prior to account for both correlated and uncorrelated pleiotropic effects
 #'
-#' @param D data frame containing betaY, betaYse, betaX and betaXse, or MRInput object
-#' @param n.chains number of chains
-#' @param variable.names parameters to save estimates for, in addition to theta
-#' @param n.iter number of iterations (not including warmup)
-#' @param n.burnin number of warmup iterations
-#' @param stan fit the model using stan, default is to use JAGS
-#' @param n.cores number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()
-#' @param return_fit return the fitted JAGS or Stan model object, default is FALSE
-#' @param fixed_tau a fixed value for tau, otherwise tau will be estimated
-#' @param omega correlation parameter for bx and by, default is 0 which assumes independence
+#' @param D Data frame containing betaY, betaYse, betaX and betaXse, or MRInput object
+#' @param n.chains Number of chains
+#' @param variable.names Parameters to save estimates for, in addition to theta
+#' @param n.iter Number of iterations (not including warmup)
+#' @param n.burnin Number of warmup iterations
+#' @param stan Fit the model using stan, default is to use JAGS
+#' @param n.cores Number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()
+#' @param return_fit Return the fitted JAGS or Stan model object, default is FALSE
+#' @param fixed_tau Optional fixed value for tau, otherwise tau will be estimated
+#' @param omega Optional correlation parameter for betaX and betaY, default is 0 which assumes independence
 #'
 #' @return Output from the mr_horse() function is a list that contains:
 #' $MR_Estimate: a data frame with the causal effect estimate (which is the posterior mean), standard deviation (i.e., the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value                                                                                                               the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value
@@ -81,6 +77,8 @@ mr_horse_model_jags = function() {
 mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000,
                     stan = FALSE, n.cores = parallelly::availableCores(), return_fit = FALSE, fixed_tau = -1, omega = 0){
 
+  N = nrow(D) # Number of genetic instruments
+
   # Validate data input, accepts data frame, data table, tibble or MRInput object (does not require conversion)
   if (!(is.data.frame(D) | inherits(D, "MRInput"))) stop("Error: D must be a data frame or an MRInput object")
 
@@ -96,13 +94,19 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
   # Ensure at least the results for the theta parameter are saved
   variable.names = unique(c("theta", variable.names))
 
+  # Create covariance matrix V
+  R = matrix(c(1, omega, omega, 1), nrow=2,ncol=2)          # R matrix with omega on off diagonals, default is identity
+  V = array(0, c(2,2,N))
+  for (i in 1:N) {
+    S = diag(D[i, c('betaXse', 'betaYse')], nrow = 2, ncol=2)
+    V[,,i] = S * R * S
+  }
+
   data_list = list(
-    N = length(D$betaY),                                 # Number of genetic instruments
+    N = N,                                               # Number of genetic instruments
     obs = as.matrix(D[,c('betaX','betaY')],ncol=2),      # Observed bx and by
-    sy = D$betaYse,                                      # Standard error of by
-    sx = D$betaXse,                                      # Standard error of bx
-    fixed_tau = fixed_tau,                               # Fixed tau value or default -1
-    omega = omega                                        # Correlation parameter for bx and by
+    V = V,                                               # Covariance matrix of betaX and betaY
+    fixed_tau = fixed_tau                                # Fixed tau value - default -1
   )
 
   # Fit model
