@@ -12,8 +12,9 @@ mvmr_horse(
   n.burnin = 10000,
   stan = FALSE,
   n.cores = parallelly::availableCores(),
+  return_fit = FALSE,
   fixed_tau = -1,
-  return_fit = FALSE
+  omega = 0
 )
 }
 \arguments{
@@ -27,13 +28,15 @@ mvmr_horse(
 
 \item{n.burnin}{Number of warmup iterations}
 
-\item{stan}{fit the model using stan, default is to use JAGS}
+\item{stan}{Fit the model using stan, default is to use JAGS}
 
 \item{n.cores}{Number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()}
 
-\item{fixed_tau}{a fixed value for tau, otherwise tau will be estimated}
+\item{return_fit}{Return the fitted JAGS or Stan model object, default is FALSE}
 
-\item{return_fit}{return the fitted JAGS or Stan model object, default is FALSE}
+\item{fixed_tau}{Optional fixed value for tau, otherwise tau will be estimated}
+
+\item{omega}{Optional vector of correlation parameters for for each betaX-betaY pairing (in order of X1Y, X2Y..). E.g. omega = c(0, 0.1, 0.1). Or a single value can be provided to use for all omegas. Default assumes independence (omega=0)}
 }
 \value{
 Output from the mr_horse() function is a list that contains:

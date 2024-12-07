@@ -3,7 +3,7 @@
 # Note: can use ifelse() in JAGS model but not regular if() statements
 
 mr_horse_model_jags = function() {
-    for (i in 1:N){                                  # Where N is the number of variants (rows)
+    for (i in 1:J){                                  # Where J is the number of variants (rows)
 
       mu[i, 1] = bx0[i]                              # Expected mean of bx distribution
       mu[i, 2] = theta * bx0[i] + alpha[i]           # Expected mean of by distribution
@@ -77,7 +77,7 @@ mr_horse_model_jags = function() {
 mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000,
                     stan = FALSE, n.cores = parallelly::availableCores(), return_fit = FALSE, fixed_tau = -1, omega = 0){
 
-  N = nrow(D) # Number of genetic instruments
+  J = nrow(D) # Number of genetic instruments
 
   # Validate data input, accepts data frame, data table, tibble or MRInput object (does not require conversion)
   if (!(is.data.frame(D) | inherits(D, "MRInput"))) stop("Error: D must be a data frame or an MRInput object")
@@ -95,17 +95,19 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
   variable.names = unique(c("theta", variable.names))
 
   # Create covariance matrix V
-  R = matrix(c(1, omega, omega, 1), nrow=2,ncol=2)          # R matrix with omega on off diagonals, default is identity
-  V = array(0, c(2,2,N))
-  for (i in 1:N) {
+  R = matrix(c(1, omega, omega, 1), nrow=2,ncol=2)      # R matrix with omega on off diagonals, default is identity
+  V = array(0, c(2,2,J))
+  for (i in 1:J) {
     S = diag(D[i, c('betaXse', 'betaYse')], nrow = 2, ncol=2)
-    V[,,i] = S * R * S
+    V[,,i] = S %*% R %*% S
   }
+  l = list()
+  for (i in 1:J) l[[i]]= V[,,i]                          # Stan requires Nx2x2 format rather than 2x2xN
 
   data_list = list(
-    N = N,                                               # Number of genetic instruments
+    J = J,                                               # Number of genetic instruments
     obs = as.matrix(D[,c('betaX','betaY')],ncol=2),      # Observed bx and by
-    V = V,                                               # Covariance matrix of betaX and betaY
+    V = if (stan == TRUE) l else V,                      # Covariance matrix of betaX and betaY
     fixed_tau = fixed_tau                                # Fixed tau value - default -1
   )
 
@@ -128,6 +130,7 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
                   n.chains = n.chains,
                   n.iter = n.burnin + n.iter,
                   n.burnin = n.burnin,
+                  n.thin = 1,
                   model.file = mr_horse_model_jags,
                   n.cluster = n.cores)
       mr.coda = coda::as.mcmc(fit)

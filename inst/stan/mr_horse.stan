@@ -4,19 +4,19 @@
 // Note: normal() expects sd and multi_normal expects covar matrix with variance
 
 data {
-  int<lower=0> N;                 // Number of variants (rows)
-  matrix[N,2] obs;                // Observed bx and by
-  matrix[2,2] V[N];               // Variance covariance matrix for bx by
+  int<lower=0> J;                 // Number of variants (rows)
+  matrix[J,2] obs;                // Observed bx and by
+  matrix[2,2] V[J];               // Variance covariance matrix for bx by
   real<lower=-1> fixed_tau;       // Fixed tau value
 }
 
 parameters {
   real theta;                     // Causal effect of X on Y
-  vector[N] alpha;                // Pleiotropic effects on the outcome
-  vector[N] bx0;                  // Latent effect of the variant on the exposure
-  vector<lower=0>[N] a;           // Parameter for phi[i]
-  vector<lower=0>[N] b;           // Parameter for phi[i]
-  vector<lower=-1, upper=1>[N] r; // Correlation between alpha and bx0
+  vector[J] alpha;                // Pleiotropic effects on the outcome
+  vector[J] bx0;                  // Latent effect of the variant on the exposure
+  vector<lower=0>[J] a;           // Parameter for phi[i]
+  vector<lower=0>[J] b;           // Parameter for phi[i]
+  vector<lower=0, upper=1>[J] r; // Correlation between alpha and bx0
   real<lower=0> c;                // Parameter for tau
   real<lower=0> d;                // Parameter for tau
   real<lower=0> vx0;              // Variance for bx0 distribution
@@ -24,12 +24,12 @@ parameters {
 }
 
 transformed parameters {
-  vector<lower=0>[N] phi = a ./ sqrt(b);      // Scaling factor for each variant based on parameters a and b
-  vector[N] rho = 2 * r - 1;                  // Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i]
+  vector<lower=0>[J] phi = a ./ sqrt(b);      // Scaling factor for each variant based on parameters a and b
+  vector[J] rho = 2 * r - 1;                  // Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i]
   real<lower=0> tau = c / sqrt(d);            // Controls the global level of shrinkage for alphas
   if (fixed_tau != -1) tau = fixed_tau;       // If default value of -1 is given, estimate tau, otherwise fix
 
-  matrix[N,2] mu;                             // Expected means
+  matrix[J,2] mu;                             // Expected means
   mu[:, 1] = bx0;                             // Expected mean of bx
   mu[:, 2] = theta * bx0 + alpha;             // Expected mean of by
 }
@@ -47,7 +47,7 @@ model {
   vx0 ~ normal(0, 1);
   mx0 ~ normal(0, 1);
 
-  for (i in 1:N){
+  for (i in 1:J){
     obs[i] ~ multi_normal(mu[i], V[i]);   // Jointly model bx and by likelihood
   }
 }

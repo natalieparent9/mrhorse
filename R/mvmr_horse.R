@@ -99,7 +99,7 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
   V = array(0, c(K+1,K+1,N))
   for (i in 1:N) {
     S = diag(D[i, c(sprintf("betaX%ise", 1:K), 'betaYse')], nrow = K+1, ncol=K+1)
-    V[,,i] = S * omega * S
+    V[,,i] = S %*% omega %*% S
   }
 
   # Ensure at least the results for theta parameter are saved

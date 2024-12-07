@@ -18,25 +18,25 @@ mr_horse(
 )
 }
 \arguments{
-\item{D}{data frame containing betaY, betaYse, betaX and betaXse, or MRInput object}
+\item{D}{Data frame containing betaY, betaYse, betaX and betaXse, or MRInput object}
 
-\item{n.chains}{number of chains}
+\item{n.chains}{Number of chains}
 
-\item{variable.names}{parameters to save estimates for, in addition to theta}
+\item{variable.names}{Parameters to save estimates for, in addition to theta}
 
-\item{n.iter}{number of iterations (not including warmup)}
+\item{n.iter}{Number of iterations (not including warmup)}
 
-\item{n.burnin}{number of warmup iterations}
+\item{n.burnin}{Number of warmup iterations}
 
-\item{stan}{fit the model using stan, default is to use JAGS}
+\item{stan}{Fit the model using stan, default is to use JAGS}
 
-\item{n.cores}{number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()}
+\item{n.cores}{Number of cores to use in parallel if running multiple chains, defaults to parallelly::availableCores()}
 
-\item{return_fit}{return the fitted JAGS or Stan model object, default is FALSE}
+\item{return_fit}{Return the fitted JAGS or Stan model object, default is FALSE}
 
-\item{fixed_tau}{a fixed value for tau, otherwise tau will be estimated}
+\item{fixed_tau}{Optional fixed value for tau, otherwise tau will be estimated}
 
-\item{omega}{correlation parameter for bx and by, default is 0 which assumes independence}
+\item{omega}{Optional correlation parameter for betaX and betaY, default is 0 which assumes independence}
 }
 \value{
 Output from the mr_horse() function is a list that contains:
@@ -62,6 +62,5 @@ Causal effect estimation is performed in a Bayesian framework using a horseshoe 
 
 # View diagnostic plots (trace and density)
 # plot(MREx$MR_Coda[,c('theta','tau')])
-#
 
 }

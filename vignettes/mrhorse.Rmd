@@ -1,0 +1,49 @@
+---
+title: "mrhorse"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{mrhorse}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+
+## Introduction
+
+In this vignette we will run through univariable Mendelian randomization as described in the paper: 
+
+Grant, AJ and Burgess, S (2024). [A Bayesian approach to Mendelian randomization using summary statistics in the univariable and multivariable settings with correlated pleiotropy](https://doi.org/10.1016/j.ajhg.2023.12.002). *American Journal of Human Genetics*. 111(1):165-180. doi: <https://doi.org/10.1016/j.ajhg.2023.12.002>
+
+In order to run the code, [JAGS](https://sourceforge.net/projects/mcmc-jags/) first needs to be installed externally.
+
+```{r setup}
+library(mrhorse)
+```
+
+
+## Basic model 
+
+The built in data data_ex contains simulated genetic association estimates between 100 genetic instruments and an exposure and outcome, as well as their corresponding standard errors. This is taken from the first replication of the first simulation study in the paper (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). The dataset can be analysed as follows.
+
+```{r}
+set.seed(20230531)
+MREx = mr_horse(data_ex)
+MREx$MR_Estimate
+```
+
+The first item in the outputted MREx object is the MR_Estimate dataframe which by default contains parameter estimates for theta, the causal effect of the exposure on the outcome. 
+
+```{r}
+MREx$MR_Coda
+```
+
+
+
