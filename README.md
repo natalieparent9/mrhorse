@@ -1,10 +1,6 @@
 
 # mrhorse
 
-<!-- badges: start -->
-[![R-CMD-check](https://github.com/natalieparent9/mrhorse/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/natalieparent9/mrhorse/actions/workflows/R-CMD-check.yaml)
-<!-- badges: end -->
-
 Provides the R code to implement the methods described in:
 
 Grant, AJ and Burgess, S (2024). [A Bayesian approach to Mendelian
@@ -35,6 +31,27 @@ You can install the development version of mrhorse from
 ``` r
 library(devtools)
 devtools::install_github("natalieparent9/mrhorse")
+#> 
+#> ── R CMD build ─────────────────────────────────────────────────────────────────
+#>      checking for file ‘/private/var/folders/6p/3_l0pbvj53lbsc774mttyysr0000gn/T/RtmpjwlRUF/remotes11152523bd813/natalieparent9-mrhorse-63191e6/DESCRIPTION’ ...  ✔  checking for file ‘/private/var/folders/6p/3_l0pbvj53lbsc774mttyysr0000gn/T/RtmpjwlRUF/remotes11152523bd813/natalieparent9-mrhorse-63191e6/DESCRIPTION’
+#>   ─  preparing ‘mrhorse’:
+#>      checking DESCRIPTION meta-information ...  ✔  checking DESCRIPTION meta-information
+#>   ─  cleaning src
+#>   ─  checking for LF line-endings in source and make files and shell scripts
+#>   ─  checking for empty or unneeded directories
+#>        NB: this package now depends on R (>= 3.5.0)
+#>        WARNING: Added dependency on R >= 3.5.0 because serialized objects in
+#>      serialize/load version 3 cannot be read in older versions of R.
+#>      File(s) containing such objects:
+#>        ‘mrhorse/README_cache/gfm/unnamed-chunk-3_fc0074dc90533e48417417587eb05da2.RData’
+#>        ‘mrhorse/README_cache/gfm/unnamed-chunk-3_fc0074dc90533e48417417587eb05da2.rdx’
+#>        ‘mrhorse/README_cache/gfm/unnamed-chunk-4_06618c0614294ee3282d94231388fd59.RData’
+#>        ‘mrhorse/README_cache/gfm/unnamed-chunk-4_06618c0614294ee3282d94231388fd59.rdx’
+#>        ‘mrhorse/README_cache/gfm/unnamed-chunk-5_cec2b9a5f79319fa17e2a46445c4d61e.RData’
+#>        ‘mrhorse/README_cache/gfm/unnamed-chunk-5_cec2b9a5f79319fa17e2a46445c4d61e.rdx’
+#>   ─  building ‘mrhorse_0.0.0.9000.tar.gz’
+#>      
+#> 
 library(mrhorse)
 ```
 
@@ -66,6 +83,11 @@ Optional arguments are:
 - `stan`: fit the model using rstan (default = FALSE, uses JAGS)
 - `n.cores`: number of cores to use in parallel when running multiple
   chains (default = parallelly::availableCores())
+- `return_fit`: return the fitted JAGS or Stan model object, default is
+  FALSE
+- `fixed_tau`: optional fixed value for tau, default is to estimate tau
+- `omega`: correlation parameter for betaX and betaY, default is 0
+  assuming independence (no sample overlap)
 
 Output from the `mr_horse()` function include:
 
@@ -73,7 +95,9 @@ Output from the `mr_horse()` function include:
   the posterior mean), standard deviation (i.e., the posterior standard
   deviation), upper and lower bounds of the 95% credible interval, and
   the R-hat value
-- `$MR_Coda`: full MCMC samples for all parameters in `variable.names`
+- `$MR_Coda`: full MCMC samples for all parameters in `variable.names`,
+  note that burnin iterations are discared
+- `$Fit`: the fitted model object (if reuturn_fit was set to TRUE)
 
 JAGS plotting tools can be used with the MCMC output, for example using
 `traceplot()` and `densplot()`.
@@ -87,19 +111,19 @@ K columns `betaX1se`, `betaX2se`, … .
 
 ### Univariable MR
 
-The csv file dat_ex.csv contains a dataframe containing simulated
-genetic association estimates between 100 genetic instruments and an
-exposure and outcome, as well as their corresponding standard errors.
-This is taken from the first replication of the first simulation study
-(that is, where 20% of variants are pleiotropic, and pleiotropy is
-balanced). The dataset can be analysed as follows.
+The built in data data_ex contains simulated genetic association
+estimates between 100 genetic instruments and an exposure and outcome,
+as well as their corresponding standard errors. This is taken from the
+first replication of the first simulation study (that is, where 20% of
+variants are pleiotropic, and pleiotropy is balanced). The dataset can
+be analysed as follows.
 
 ``` r
 set.seed(20230531)
 MREx = mr_horse(data_ex, n.iter=1000, n.burnin=1000)
 MREx$MR_Estimate
 #>   Estimate    SD 2.5% quantile 97.5% quantile Rhat
-#> 1    0.099 0.018         0.065          0.134    1
+#> 1    0.098 0.018         0.064          0.135    1
 ```
 
 View diagnostic plots
@@ -108,13 +132,13 @@ View diagnostic plots
 coda::traceplot(MREx$MR_Coda[, "theta"])
 ```
 
-<img src="man/figures/README-unnamed-chunk-4-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-4-1.png" width="50%" />
 
 ``` r
 coda::densplot(MREx$MR_Coda[, "theta"])
 ```
 
-<img src="man/figures/README-unnamed-chunk-4-2.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-4-2.png" width="50%" />
 
 Note the R2jags and rstan package also have a traceplot and densplot
 function
@@ -129,11 +153,11 @@ simulation study (that is, where 20% of variants are pleiotropic, and
 pleiotropy is balanced). The dataset can be analysed as follows.
 
 ``` r
-set.seed(20230531)
+set.seed(100)
 MVMREx = mvmr_horse(data_mv_ex, n.iter=1000, n.burnin=1000)
-#> Fitting model with 2 exposures
+#> Fitting model with 2 exposures and 100 variants
 MVMREx$MR_Estimate
 #>   Parameter Estimate    SD 2.5% quantile 97.5% quantile  Rhat
-#> 1  theta[1]    0.099 0.018         0.064          0.135 1.004
-#> 2  theta[2]    0.104 0.018         0.068          0.140 1.002
+#> 1  theta[1]    0.100 0.019         0.063          0.138 1.024
+#> 2  theta[2]    0.106 0.018         0.070          0.140 1.011
 ```

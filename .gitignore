@@ -5,3 +5,5 @@
 .DS_Store
 .quarto
 .o
+inst/doc
+README_cache/

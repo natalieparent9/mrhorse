@@ -7,27 +7,17 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.path = "man/figures/README-",
-  out.width = "100%"
+  out.width = "50%"
 )
 ```
 
 # mrhorse
 
-  <!-- badges: start -->
-  [![R-CMD-check](https://github.com/natalieparent9/mrhorse/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/natalieparent9/mrhorse/actions/workflows/R-CMD-check.yaml)
-  <!-- badges: end -->
-
-
 Provides the R code to implement the methods described in:
 
 Grant, AJ and Burgess, S (2024). [A Bayesian approach to Mendelian randomization using summary statistics in the univariable and multivariable settings with correlated pleiotropy](https://doi.org/10.1016/j.ajhg.2023.12.002). *American Journal of Human Genetics*. 111(1):165-180. doi: <https://doi.org/10.1016/j.ajhg.2023.12.002>
 
-The paper introduces a method for performing both univariable and multivariable Mendelian randomization to examine the
-causal effect of one or more exposures on an outcome using genetic association data. The methods take as input estimates
-of the associations between genetic instruments and the exposure(s) and outcome from GWAS summary statistics. Causal
-effect estimation is performed in a Bayesian framework using a horseshoe shrinkage prior to account for both correlated
-and uncorrelated pleiotropic effects.
-
+The paper introduces a method for performing both univariable and multivariable Mendelian randomization to examine the causal effect of one or more exposures on an outcome using genetic association data. The methods take as input estimates of the associations between genetic instruments and the exposure(s) and outcome from GWAS summary statistics. Causal effect estimation is performed in a Bayesian framework using a horseshoe shrinkage prior to account for both correlated and uncorrelated pleiotropic effects.
 
 ## Installation
 
@@ -40,7 +30,6 @@ library(devtools)
 devtools::install_github("natalieparent9/mrhorse")
 library(mrhorse)
 ```
-
 
 ## Implementation
 
@@ -61,11 +50,15 @@ Optional arguments are:
 -   `n.burnin`: number of iterations for burn-in (default = 10000)
 -   `stan`: fit the model using rstan (default = FALSE, uses JAGS)
 -   `n.cores`: number of cores to use in parallel when running multiple chains (default = parallelly::availableCores())
+-   `return_fit`: return the fitted JAGS or Stan model object, default is FALSE
+-   `fixed_tau`: optional fixed value for tau, default is to estimate tau
+-   `omega`: correlation parameter for betaX and betaY, default is 0 assuming independence (no sample overlap)
 
 Output from the `mr_horse()` function include:
 
 -   `$MR_Estimate`: a data frame with the causal effect estimate (which is the posterior mean), standard deviation (i.e., the posterior standard deviation), upper and lower bounds of the 95% credible interval, and the R-hat value
--   `$MR_Coda`: full MCMC samples for all parameters in `variable.names`
+-   `$MR_Coda`: full MCMC samples for all parameters in `variable.names`, note that burnin iterations are discared
+-   `$Fit`: the fitted model object (if reuturn_fit was set to TRUE)
 
 JAGS plotting tools can be used with the MCMC output, for example using `traceplot()` and `densplot()`.
 
@@ -75,9 +68,9 @@ The function `mvmr_horse` implements the multivariable MVMR-Horse method. The re
 
 ### Univariable MR
 
-The csv file dat_ex.csv contains a dataframe containing simulated genetic association estimates between 100 genetic instruments and an exposure and outcome, as well as their corresponding standard errors. This is taken from the first replication of the first simulation study (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). The dataset can be analysed as follows.
+The built in data data_ex contains simulated genetic association estimates between 100 genetic instruments and an exposure and outcome, as well as their corresponding standard errors. This is taken from the first replication of the first simulation study (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). The dataset can be analysed as follows.
 
-```{r}
+```{r cache=TRUE}
 set.seed(20230531)
 MREx = mr_horse(data_ex, n.iter=1000, n.burnin=1000)
 MREx$MR_Estimate
@@ -85,7 +78,7 @@ MREx$MR_Estimate
 
 View diagnostic plots
 
-```{r}
+```{r cache=TRUE}
 coda::traceplot(MREx$MR_Coda[, "theta"])
 coda::densplot(MREx$MR_Coda[, "theta"])
 ```
@@ -96,10 +89,8 @@ Note the R2jags and rstan package also have a traceplot and densplot function
 
 The csv file dat_mv_ex.csv contains a dataframe containing simulated genetic association estimates between 100 genetic instruments and two exposures and an outcome, as well as their corresponding standard errors. This is taken from the first replication of the multivariable simulation study (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). The dataset can be analysed as follows.
 
-```{r}
-set.seed(20230531)
+```{r cache=TRUE}
+set.seed(100)
 MVMREx = mvmr_horse(data_mv_ex, n.iter=1000, n.burnin=1000)
 MVMREx$MR_Estimate
 ```
-
-
