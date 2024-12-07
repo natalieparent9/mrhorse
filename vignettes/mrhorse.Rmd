@@ -29,21 +29,80 @@ library(mrhorse)
 ```
 
 
-## Basic model 
+### Basic model 
 
-The built in data data_ex contains simulated genetic association estimates between 100 genetic instruments and an exposure and outcome, as well as their corresponding standard errors. This is taken from the first replication of the first simulation study in the paper (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). The dataset can be analysed as follows.
+The built in data data_ex contains simulated genetic association estimates between 100 genetic instruments and an exposure and outcome, as well as their corresponding standard errors. This is taken from the first replication of the first simulation study in the paper (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). Note that all datasets supplied to mr_horse must have the same columns as below.
 
 ```{r}
+head(data_ex, 5)
+```
+The dataset can be analysed as follows, using JAGS by default.
+
+```{r cache=TRUE}
 set.seed(20230531)
 MREx = mr_horse(data_ex)
 MREx$MR_Estimate
 ```
-
 The first item in the outputted MREx object is the MR_Estimate dataframe which by default contains parameter estimates for theta, the causal effect of the exposure on the outcome. 
 
-```{r}
-MREx$MR_Coda
+The MCMC samples for theta are saved in the MR_Coda object.
+
+```{r cache=TRUE}
+head(MREx$MR_Coda, 4)
 ```
+
+Since the number of chains is 3 by default, there is a seperate list of the MCMC samples of theta for each chain.
+The first sample shown is iteration 10,001 as the 10,000 warmup samples are not retained.
+
+
+### Diagnostic plots
+
+```{r cache=TRUE, out.width="50%"}
+coda::traceplot(MREx$MR_Coda[, "theta"])
+coda::densplot(MREx$MR_Coda[, "theta"])
+```
+
+
+
+<br><br>
+
+### Using Stan instead
+
+If we want to change the number of iterations, use Stan instead, and also save the samples for tau we could use the following:
+
+```{r warning=FALSE, cache=TRUE}
+set.seed(20230531)
+MREx = mr_horse(data_ex, n.burnin = 1000, n.iter = 1000, stan = TRUE, variable.names = 'tau')
+MREx$MR_Estimate
+```
+
+Note only the parameter estimates for theta are given still. Tau samples can now be viewed in MR_Coda or summarised using the below. 
+
+```{r cache=TRUE}
+options(scipen=100)
+summary(MREx$MR_Coda)
+```
+
+### Fixing tau
+
+The value for tau can be also be fixed 
+
+```{r cache=TRUE}
+set.seed(20230531)
+MREx = mr_horse(data_ex, n.burnin = 1000, n.iter = 1000, fixed_tau = 0.01)
+MREx$MR_Estimate
+```
+
+
+### Sample overlap
+
+
+```{r cache=TRUE}
+
+
+```
+
+
 
 
 

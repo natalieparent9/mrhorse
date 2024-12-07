@@ -1,13 +1,12 @@
 
-
 # JAGS model
 
-# change n back to j
-
 mvmr_horse_model_jags = function() {
-  for (i in 1:N){                                                   # Number of variants (rows)
+  for (i in 1:J){                                                   # Number of variants (rows)
 
-    for (k in 1:K) mu[i,k] = bx0[i,k]                               # Expected mean of exposures (bxs)
+    for (k in 1:K) {
+      mu[i,k] = bx0[i,k]                                            # Expected mean of exposures (bxs)
+    }
     mu[i, K+1] = inprod(bx0[i, 1:K], theta) + alpha[i]              # Expected mean of by
 
     obs[i,] ~ dmnorm.vcov(mu[i,], V[,,i])                           # Jointly model bxs and by
@@ -34,8 +33,8 @@ mvmr_horse_model_jags = function() {
     sx0[k] = sqrt(vx0[k])                    # Standard error for bx0 distribution
     theta[k] ~ dunif(-10, 10)                # Causal effect of X[k] on Y
     for (j in 1:K){
-    A[j, k] = ifelse(j==k, 1/vx0[j], 0)      # Precision matrix
-    B[j, k] = 1 / (sx0[j] * sx0[k])          # Covariance matrix
+      A[j, k] = ifelse(j==k, 1/vx0[j], 0)      # Precision matrix
+      B[j, k] = 1 / (sx0[j] * sx0[k])          # Covariance matrix
     }
   }
 }
@@ -74,7 +73,7 @@ mvmr_horse_model_jags = function() {
 #' # View diagnostic plots (trace and density)
 #' # plot(MREx$MR_Coda[,c('theta[1]','theta[2]')])
 #'
-mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE, n.cores = parallelly::availableCores(), return_fit = FALSE, fixed_tau = -1, omega=0){
+mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000, stan = FALSE, n.cores = parallelly::availableCores(), return_fit = FALSE, fixed_tau = -1, omega = 0){
 
   # Validate input
   if (!(is.data.frame(D) | inherits(D, "MRMVInput"))) stop("Error: D must be a data frame or an MRInput object")
@@ -83,7 +82,7 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
   if (inherits(D, "MRMVInput")) D = data.frame(betaY = D@betaY, betaYse = D@betaYse, D@betaX, D@betaXse)
 
   # Dimension parameters
-  N = dim(D)[1]                                # number of variants (rows)
+  J = dim(D)[1]                                # number of variants (rows)
   K = sum(grepl("^betaX[0-9]+$", names(D)))    # number of exposures
 
   # Validate input
@@ -92,53 +91,56 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
   if (fixed_tau != -1 & fixed_tau < 0) stop('Error: fixed value for tau must be >0')
 
   # Omega handling
-  if (omega == 0) omega = diag(1, nrow=K+1, ncol=K+1)
-
+  if (omega == 0) {
+    omega = diag(1, nrow=K+1, ncol=K+1)
+  }
 
   # Create covariance matrix V
-  V = array(0, c(K+1,K+1,N))
-  for (i in 1:N) {
+  V = array(0, c(K+1,K+1,J))
+  for (i in 1:J) {
     S = diag(D[i, c(sprintf("betaX%ise", 1:K), 'betaYse')], nrow = K+1, ncol=K+1)
     V[,,i] = S %*% omega %*% S
   }
+  l = list()
+  for (i in 1:J) l[[i]]= V[,,i]                          # Stan requires NxK+1xK+1 format rather than NxK+1xK+1
 
   # Ensure at least the results for theta parameter are saved
   variable.names = unique(c("theta", variable.names))
 
-  data_list = list(obs = as.matrix(D[, c(sprintf("betaX%i", 1:K), 'betaY')], ncol=2),
-                   V = V,
-                   N = N,
-                   K = K,
+  data_list = list(obs = as.matrix(D[, c(sprintf("betaX%i", 1:K), 'betaY')], ncol=2), # Observed bx and by
+                   V = if (stan == TRUE) l else V,        # Covariance matrix of betaX and betaY
+                   J = J,                                 # Number of genetic instruments
+                   K = K,                                 # Number of exposures
                    R = diag(K),
                    fixed_tau = fixed_tau)
 
-  cat("Fitting model with ", K, " exposures and ", N, " variants\n", sep='')
+  cat("Fitting model with ", K, " exposures and ", J, " variants\n", sep='')
 
   if (stan == TRUE) {  # Run using Stan
     fit = rstan::sampling(stanmodels$mvmr_horse,
-                        data = data_list,
-                        pars = variable.names,
-                        chains = n.chains,
-                        iter = n.burnin + n.iter,
-                        warmup = n.burnin,
-                        cores = n.cores,
-                        open_progress = FALSE # prevent pop up during testing, does not suppress progress being printed in console
-                        # control = ifelse(algorithm=='NUTS',list(adapt_delta = adapt_delta, max_treedepth = max_treedepth), list())
+                          data = data_list,
+                          pars = variable.names,
+                          chains = n.chains,
+                          iter = n.burnin + n.iter,
+                          warmup = n.burnin,
+                          cores = n.cores,
+                          open_progress = FALSE # prevent pop up during testing, does not suppress progress being printed in console
+                          # control = ifelse(algorithm=='NUTS',list(adapt_delta = adapt_delta, max_treedepth = max_treedepth), list())
     )
     mr.coda = rstan::As.mcmc.list(fit)
 
   } else if (stan == FALSE) {  # Run using JAGS
     fit = R2jags::jags.parallel(data = data_list,
-                                     model.file = mvmr_horse_model_jags,
-                                     parameters.to.save = variable.names,
-                                     n.chains = n.chains,
-                                     n.iter = n.burnin + n.iter,
-                                     n.burnin = n.burnin,
-                                     n.cluster = n.cores,
-                                     n.thin = 1)                # remove thinning that occurs by default
+                                model.file = mvmr_horse_model_jags,
+                                parameters.to.save = variable.names,
+                                n.chains = n.chains,
+                                n.iter = n.burnin + n.iter,
+                                n.burnin = n.burnin,
+                                n.cluster = n.cores,
+                                n.thin = 1)                # remove thinning that occurs by default
     mr.coda = coda::as.mcmc(fit)
   } else {
-      stop("Error: invalid input for argument stan, must be TRUE or FALSE")
+    stop("Error: invalid input for argument stan, must be TRUE or FALSE")
   }
 
   mr_estimate = data.frame("Parameter" = sprintf("theta[%i]", 1:K),

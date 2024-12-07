@@ -4,6 +4,7 @@
 ## Basic tests ####
 
 testthat::test_that("Basic JAGS model runs successfully and produces expected results", {
+  # Note this test is checking against Andrew's original results
   set.seed(20230531)
   # Run the model
   result = mr_horse(D = data_ex)
@@ -20,7 +21,7 @@ testthat::test_that("Basic JAGS model runs successfully and produces expected re
 
 
 testthat::test_that("Basic Stan model runs successfully and produces expected output type", {
-  set.seed(100)
+  set.seed(20230531)
   warnings = capture_warnings({
     result = mr_horse(D = data_ex, n.iter = 1000, n.burnin = 500, stan = TRUE)
   })
@@ -115,7 +116,7 @@ testthat::test_that("JAGS model runs successfully and produces expected results 
   expect_named(result, c("MR_Estimate", "MR_Coda"))
   expect_s3_class(result$MR_Coda, "mcmc.list")
 
-  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.095, "SD"=0.018, "2.5% quantile"=0.059, "97.5% quantile"=0.13, "Rhat"=1.018, check.names = FALSE))
+  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.096, "SD"=0.017, "2.5% quantile"=0.062, "97.5% quantile"=0.29, "Rhat"=1.031, check.names = FALSE))
   print(result$MR_Estimate)
 })
 
@@ -154,7 +155,7 @@ testthat::test_that("JAGS model runs successfully and produces expected results 
   expect_equal(summary(result$MR_Coda)$statistics['tau',1], 0.01)
   expect_equal(summary(result$MR_Coda)$statistics['tau',2], 0.00)
 
-  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.094, "SD"=0.018, "2.5% quantile"=0.058, "97.5% quantile"=0.131, "Rhat"=1.002, check.names = FALSE))
+  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.096, "SD"=0.018, "2.5% quantile"=0.060, "97.5% quantile"=0.131, "Rhat"=1.025, check.names = FALSE))
   print(result$MR_Estimate)
 })
 

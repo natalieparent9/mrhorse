@@ -130,7 +130,7 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
                   n.chains = n.chains,
                   n.iter = n.burnin + n.iter,
                   n.burnin = n.burnin,
-                  n.thin = 1,
+                  n.thin = 1, # retain all samples instead of thinning to 10%
                   model.file = mr_horse_model_jags,
                   n.cluster = n.cores)
       mr.coda = coda::as.mcmc(fit)
