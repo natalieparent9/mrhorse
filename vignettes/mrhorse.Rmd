@@ -1,5 +1,5 @@
 ---
-title: "mrhorse"
+title: "mrhorse and extensions"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{mrhorse}
@@ -9,16 +9,15 @@ vignette: >
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
+  collapse = FALSE,
+  comment = "#>",
+  out.width = "50%"
 )
 ```
 
-
-
 ## Introduction
 
-In this vignette we will run through univariable Mendelian randomization as described in the paper: 
+In this vignette we will run through univariable Mendelian randomization as described in the paper:
 
 Grant, AJ and Burgess, S (2024). [A Bayesian approach to Mendelian randomization using summary statistics in the univariable and multivariable settings with correlated pleiotropy](https://doi.org/10.1016/j.ajhg.2023.12.002). *American Journal of Human Genetics*. 111(1):165-180. doi: <https://doi.org/10.1016/j.ajhg.2023.12.002>
 
@@ -28,41 +27,38 @@ In order to run the code, [JAGS](https://sourceforge.net/projects/mcmc-jags/) fi
 library(mrhorse)
 ```
 
+### Basic model
 
-### Basic model 
-
-The built in data data_ex contains simulated genetic association estimates between 100 genetic instruments and an exposure and outcome, as well as their corresponding standard errors. This is taken from the first replication of the first simulation study in the paper (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). Note that all datasets supplied to mr_horse must have the same columns as below.
+The built in data data_ex contains simulated genetic association estimates between 100 genetic instruments and an exposure and outcome, as well as their corresponding standard errors. This is taken from the first replication of the first simulation study in the paper (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). Note that any datasets supplied to mr_horse must have the same columns as below.
 
 ```{r}
 head(data_ex, 5)
 ```
-The dataset can be analysed as follows, using JAGS by default.
+
+The dataset can be analysed as follows, using JAGS by default:
 
 ```{r cache=TRUE}
 set.seed(20230531)
 MREx = mr_horse(data_ex)
 MREx$MR_Estimate
 ```
-The first item in the outputted MREx object is the MR_Estimate dataframe which by default contains parameter estimates for theta, the causal effect of the exposure on the outcome. 
+
+The first item in the outputted MREx object is the MR_Estimate dataframe which by default contains parameter estimates for theta, the causal effect of the exposure on the outcome.
 
 The MCMC samples for theta are saved in the MR_Coda object.
 
-```{r cache=TRUE}
+```{r cache=TRUE, results='markup', echo=TRUE}
 head(MREx$MR_Coda, 4)
 ```
 
-Since the number of chains is 3 by default, there is a seperate list of the MCMC samples of theta for each chain.
-The first sample shown is iteration 10,001 as the 10,000 warmup samples are not retained.
-
+Since the number of chains is 3 by default, there is a seperate list of the MCMC samples of theta for each chain. The first sample shown is iteration 10,001 as the 10,000 warmup samples are not retained.
 
 ### Diagnostic plots
 
-```{r cache=TRUE, out.width="50%"}
+```{r cache=TRUE}
 coda::traceplot(MREx$MR_Coda[, "theta"])
 coda::densplot(MREx$MR_Coda[, "theta"])
 ```
-
-
 
 <br><br>
 
@@ -76,7 +72,7 @@ MREx = mr_horse(data_ex, n.burnin = 1000, n.iter = 1000, stan = TRUE, variable.n
 MREx$MR_Estimate
 ```
 
-Note only the parameter estimates for theta are given still. Tau samples can now be viewed in MR_Coda or summarised using the below. 
+Note only the parameter estimates for theta are given still. Tau samples can now be viewed in MR_Coda or summarised using the below.
 
 ```{r cache=TRUE}
 options(scipen=100)
@@ -85,24 +81,24 @@ summary(MREx$MR_Coda)
 
 ### Fixing tau
 
-The value for tau can be also be fixed 
+Where tau is informed by prior knowledge (Piironen & Vehtari, 2017).
 
 ```{r cache=TRUE}
-set.seed(20230531)
+set.seed(100)
 MREx = mr_horse(data_ex, n.burnin = 1000, n.iter = 1000, fixed_tau = 0.01)
 MREx$MR_Estimate
 ```
 
-
 ### Sample overlap
 
+The base model assumes that the samples that the $\beta_{Xj}$'s and $\beta_{Yj}$'s are estimated in are non-overlapping, meaning that they are completely separate sets of individuals, but from the same population. In practice, this is not the case, for example if UK Biobank data is used in both the outcome and exposure GWAS. The implications of sample overlap is that the $\beta_{Xj}$'s and $\beta_{Yj}$'s are not independent, and need to be modelled jointly.
+
+We can supply a single omega value which will be used for the $\beta_{X}$-$\beta_Y$ correlation. It is assumed that omega is known, it is determined by the proportion of sample overlap and estimated, e.g., using LD Score regression.
 
 ```{r cache=TRUE}
-
-
+set.seed(100)
+MREx = mr_horse(data_ex, n.burnin = 1000, n.iter = 1000, omega = 0.1)
+MREx$MR_Estimate
 ```
-
-
-
 
 

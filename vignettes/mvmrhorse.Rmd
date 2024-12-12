@@ -1,0 +1,127 @@
+---
+title: "mvmrhorse and extensions"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{mvmrhorse}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = FALSE,
+  comment = "#>",
+  out.width = '50%'
+)
+```
+
+## Introduction
+
+In this vignette we will run through multivariable Mendelian randomization as described in the paper:
+
+Grant, AJ and Burgess, S (2024). [A Bayesian approach to Mendelian randomization using summary statistics in the univariable and multivariable settings with correlated pleiotropy](https://doi.org/10.1016/j.ajhg.2023.12.002). *American Journal of Human Genetics*. 111(1):165-180. doi: <https://doi.org/10.1016/j.ajhg.2023.12.002>
+
+In order to run the code, [JAGS](https://sourceforge.net/projects/mcmc-jags/) first needs to be installed externally.
+
+```{r setup}
+library(mrhorse)
+```
+
+### Basic model
+
+```{r}
+head(data_mv_ex, 5)
+```
+
+```{r cache=TRUE}
+set.seed(20230531)
+MVMREx = mvmr_horse(data_mv_ex)
+MVMREx$MR_Estimate
+```
+
+```{r cache=TRUE, results='markup', echo=TRUE}
+head(MREx$MR_Coda, 4)
+```
+
+### Diagnostic plots
+
+```{r cache=TRUE}
+coda::traceplot(MVMREx$MR_Coda[, "theta"])
+coda::densplot(MVMREx$MR_Coda[, "theta"])
+```
+
+### Using Stan instead
+
+If we want to change the number of iterations, use Stan instead, and also save the samples for tau we could use the following:
+
+```{r warning=FALSE, cache=TRUE}
+set.seed(20230531)
+MVMREx = mvmr_horse(data_mv_ex, n.burnin = 1000, n.iter = 1000, stan = TRUE, variable.names = 'tau')
+MVMREx$MR_Estimate
+```
+
+### Sample overlap
+
+The base model assumes that the samples that the $\beta_{Xjk}$'s and $\beta_{Yj}$'s are estimated in are non-overlapping, meaning that they are completely separate sets of individuals, but from the same population. In practice, this is not the case, for example if UK Biobank data is used in both the outcome and exposure GWAS. The implications of sample overlap is that the $\beta_{Xjk}$'s and $\beta_{Yj}$'s are not independent, and need to be modelled jointly.
+
+We can supply a single value which will be used for all $\beta_{Xk}$-$\beta_Y$ and $\beta_{Xk}$-$\beta_{Xk}$ correlations, or we can provide the correlation matrix. It is assumed that the omegas are known, they can be determined by the proportion of sample overlap and estimated, e.g., using LD Score regression.
+
+Single value:
+
+```{r cache=TRUE}
+set.seed(100)
+MVMREx = mvmr_horse(data_mv_ex, n.burnin = 1000, n.iter = 1000, omega = 0.1)
+MVMREx$MR_Estimate
+```
+
+Matrix:
+
+The matrix should contain omega values for $\beta_{Xk}$-$\beta_Y$ correlations in the first row and column, and then $\beta_{Xk}$-$\beta_{Xk}$ correlations in the rest. Note that each $\omega$ may take a different value.
+
+::: math
+$$
+\begin{array}{cc} &
+\begin{array}{cc} \beta_Y & \beta_{X1} & \beta_{X2} \end{array} \\
+\begin{array}{cc} \beta_Y \\ \beta_{X1} \\ \beta_{X2} \end{array} &
+\left(\begin{array}{ccc}
+1 & \omega  & \omega \\
+\omega & 1 & \omega \\ 
+\omega & \omega & 1
+\end{array}
+\right)\end{array}
+$$
+:::
+
+Here we have the the correlation parameter for $\beta_{Y}$ and $\beta_{X1}$, and $\beta_{Y}$ and $\beta_{X2}$ as 0.2, and the correlation between $\beta_{X1}$ and $\beta_{X2}$ as 0.5.
+
+```{r}
+omega_mat = matrix(1, 3 ,3)
+omega_mat[upper.tri(omega_mat)] = c(0.2, 0.2, 0.5)
+omega_mat[lower.tri(omega_mat)] = c(0.2, 0.2, 0.5)
+omega_mat
+```
+
+```{r cache=TRUE}
+set.seed(100)
+MVMREx = mvmr_horse(data_mv_ex, n.burnin = 1000, n.iter = 1000, omega = omega_mat)
+MVMREx$MR_Estimate
+```
+
+
+
+For an even greater number of exposures, the matrix takes the form below, where again each $\omega$ may take a different value:
+
+::: math
+$$
+\begin{array}{cc} &
+\begin{array}{cccc} \beta_Y & \beta_{X1} & \dots & \beta_{XK} \end{array} \\
+\begin{array}{cccc} \beta_Y \\ \beta_{X1} \\ \vdots \\ \beta_{XK} \end{array} &
+\left(\begin{array}{cccc}
+1 & \omega & \dots & \omega \\
+\omega & 1 & \omega & \omega \\
+\vdots & \omega & \ddots & \vdots \\
+\omega & \omega & \dots & 1 
+\end{array}
+\right)\end{array}
+$$
+:::

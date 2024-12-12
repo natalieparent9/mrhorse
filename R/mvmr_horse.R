@@ -91,8 +91,12 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
   if (fixed_tau != -1 & fixed_tau < 0) stop('Error: fixed value for tau must be >0')
 
   # Omega handling
-  if (omega == 0) {
-    omega = diag(1, nrow=K+1, ncol=K+1)
+  if (length(omega) > 1) {
+    if (nrow(omega) != K+1 | ncol(omega) != K+1) stop('Omega must be provided as single value or K+1 by K+1 matrix')
+    if (!all(diag(omega) == 1)) stop('Diagonal elements of correlation matrix provided (omega) are not equal to 1')
+  } else {  # if single value provided, fill matrix with it
+    omega = matrix(omega, nrow=K+1, ncol=K+1)
+    diag(omega) = 1
   }
 
   # Create covariance matrix V
