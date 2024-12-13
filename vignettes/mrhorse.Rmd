@@ -29,7 +29,7 @@ library(mrhorse)
 
 ### Basic model
 
-The built in data data_ex contains simulated genetic association estimates between 100 genetic instruments and an exposure and outcome, as well as their corresponding standard errors. This is taken from the first replication of the first simulation study in the paper (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). Note that any datasets supplied to mr_horse must have the same columns as below.
+The built in data data_ex contains simulated genetic association estimates between 100 genetic instruments and an exposure and outcome, as well as their corresponding standard errors. This is taken from the first replication of the first simulation study in the paper (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). Note that any datasets supplied to mr_horse must have the same columns as below. The dataset may also be supplied as a MRInput object made using the MendelianRandomization package.
 
 ```{r}
 head(data_ex, 5)

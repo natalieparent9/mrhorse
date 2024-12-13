@@ -13,7 +13,7 @@ mvmr_horse_model_jags = function() {
 
     kappa[i] = (rho[i]^2 / (1 + K*rho[i]^2))                        # Used to adjust bx0
     bx0[i,1:K] ~ dmnorm(mx + sx0 * rho[i] * alpha[i] / (phi[i] * tau), A - kappa[i] * B) # Latent effect of the variants on the exposures
-    r[i] ~ dbeta(10, 10);T(-1, 1)                                   # Correlation between alpha and bx0
+    r[i] ~ dbeta(10, 10);T(0, 1)                                    # Will be scaled to correlation between alpha and bx0
     rho[i] = 2*r[i] -1                                              # Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i]
     alpha[i] ~ dnorm(0, 1 / (tau * tau * phi[i] * phi[i]))          # Pleiotropic effects on the outcome
     phi[i] = a[i] / sqrt(b[i])                                      # Scaling factor for each variant based on parameters a and b
@@ -98,7 +98,7 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
     omega = matrix(omega, nrow=K+1, ncol=K+1)
     diag(omega) = 1
   }
-
+  print(omega)
   # Create covariance matrix V
   V = array(0, c(K+1,K+1,J))
   for (i in 1:J) {

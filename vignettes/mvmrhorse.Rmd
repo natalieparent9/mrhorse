@@ -40,14 +40,16 @@ MVMREx$MR_Estimate
 ```
 
 ```{r cache=TRUE, results='markup', echo=TRUE}
-head(MREx$MR_Coda, 4)
+head(MVMREx$MR_Coda, 4)
 ```
 
 ### Diagnostic plots
 
+Now that there are two theta estimates we must refer to them individually. 
+
 ```{r cache=TRUE}
-coda::traceplot(MVMREx$MR_Coda[, "theta"])
-coda::densplot(MVMREx$MR_Coda[, "theta"])
+coda::traceplot(MVMREx$MR_Coda[, "theta[1]"])
+coda::densplot(MVMREx$MR_Coda[, "theta[1]"])
 ```
 
 ### Using Stan instead
@@ -64,7 +66,7 @@ MVMREx$MR_Estimate
 
 The base model assumes that the samples that the $\beta_{Xjk}$'s and $\beta_{Yj}$'s are estimated in are non-overlapping, meaning that they are completely separate sets of individuals, but from the same population. In practice, this is not the case, for example if UK Biobank data is used in both the outcome and exposure GWAS. The implications of sample overlap is that the $\beta_{Xjk}$'s and $\beta_{Yj}$'s are not independent, and need to be modelled jointly.
 
-We can supply a single value which will be used for all $\beta_{Xk}$-$\beta_Y$ and $\beta_{Xk}$-$\beta_{Xk}$ correlations, or we can provide the correlation matrix. It is assumed that the omegas are known, they can be determined by the proportion of sample overlap and estimated, e.g., using LD Score regression.
+We can supply a single value which will be used for all $\beta_{Xk}$-$\beta_Y$ and $\beta_{Xk}$-$\beta_{Xk}$ correlations, or we can provide the correlation matrix.
 
 Single value:
 
@@ -74,9 +76,7 @@ MVMREx = mvmr_horse(data_mv_ex, n.burnin = 1000, n.iter = 1000, omega = 0.1)
 MVMREx$MR_Estimate
 ```
 
-Matrix:
-
-The matrix should contain omega values for $\beta_{Xk}$-$\beta_Y$ correlations in the first row and column, and then $\beta_{Xk}$-$\beta_{Xk}$ correlations in the rest. Note that each $\omega$ may take a different value.
+Matrix: The matrix should contain omega values for $\beta_{Xk}$-$\beta_Y$ correlations in the first row and column, and then $\beta_{Xk}$-$\beta_{Xk}$ correlations in the rest. Note that each $\omega$ may take a different value.
 
 ::: math
 $$
@@ -90,24 +90,19 @@ $$
 \end{array}
 \right)\end{array}
 $$
-:::
-
 Here we have the the correlation parameter for $\beta_{Y}$ and $\beta_{X1}$, and $\beta_{Y}$ and $\beta_{X2}$ as 0.2, and the correlation between $\beta_{X1}$ and $\beta_{X2}$ as 0.5.
 
 ```{r}
-omega_mat = matrix(1, 3 ,3)
-omega_mat[upper.tri(omega_mat)] = c(0.2, 0.2, 0.5)
-omega_mat[lower.tri(omega_mat)] = c(0.2, 0.2, 0.5)
+omega_mat = matrix(c(1, 0.2, 0.2, 0.2, 1, 0.5, 0.2, 0.5, 1), 3,3)
 omega_mat
 ```
+
 
 ```{r cache=TRUE}
 set.seed(100)
 MVMREx = mvmr_horse(data_mv_ex, n.burnin = 1000, n.iter = 1000, omega = omega_mat)
 MVMREx$MR_Estimate
 ```
-
-
 
 For an even greater number of exposures, the matrix takes the form below, where again each $\omega$ may take a different value:
 

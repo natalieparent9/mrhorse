@@ -1,6 +1,5 @@
-
-// Run rstantools::rstan_config() and devtools::load_all() after modifying this file to trigger recompilation, sometimes install() is also required
-// In src folder the stanExports_mr_horse.o file should be updated
+// After this filed is modified, it needs to be recompiled.
+// Triggering recompilation can be inconsistent, first try Run devtools::load_all(), rstantools::rstan_config(), pkgbuild::compile_dll()// In src folder the stanExports_mr_horse.o file should be updated
 // Note: normal() expects sd and multi_normal expects covar matrix with variance
 
 data {
