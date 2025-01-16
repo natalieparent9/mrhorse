@@ -11,7 +11,7 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = FALSE,
   comment = "#>",
-  out.width = '50%'
+  out.width = '75%'
 )
 ```
 
@@ -29,9 +29,13 @@ library(mrhorse)
 
 ### Basic model
 
+The built in data data_mv_ex contains simulated genetic association estimates between 100 genetic instruments and two exposures, and an outcome, as well as their corresponding standard errors. This is taken from the first replication of the first simulation study in the paper (that is, where 20% of variants are pleiotropic, and pleiotropy is balanced). Note that any datasets supplied to mvmr_horse must follow the same format as below, but may have additonal betaX's. The dataset may also be supplied as a MVMRInput object made using the MendelianRandomization package. The dataset must contain at least two exposures. 
+
 ```{r}
 head(data_mv_ex, 5)
 ```
+
+The dataset can be analysed as follows, using JAGS by default:
 
 ```{r cache=TRUE}
 set.seed(20230531)
@@ -39,18 +43,28 @@ MVMREx = mvmr_horse(data_mv_ex)
 MVMREx$MR_Estimate
 ```
 
+The first item in the outputted MVMREx object is the MR_Estimate dataframe which by default contains parameter estimates for the thetas, the causal effects of the exposure on the outcome.
+
+The MCMC samples for theta are saved in the MR_Coda object.
+
+
 ```{r cache=TRUE, results='markup', echo=TRUE}
 head(MVMREx$MR_Coda, 4)
 ```
 
+Since the number of chains is 3 by default, there is a separate list of the MCMC samples of theta for each chain. The first sample shown is iteration 10,001 as the 10,000 warm up samples are not retained.
+
+
 ### Diagnostic plots
 
-Now that there are two theta estimates we must refer to them individually. 
+Now that there are two theta estimates, we must refer to them individually. 
 
-```{r cache=TRUE}
+```{r fig.height=4, fig.width=6, cache=TRUE}
 coda::traceplot(MVMREx$MR_Coda[, "theta[1]"])
 coda::densplot(MVMREx$MR_Coda[, "theta[1]"])
 ```
+
+The original model object can also be accessed by running mr_horse with the `return_fit` argument set to TRUE, by default it is not saved. When set to TRUE the JAGS or Stan model object is saved in `MVMR$Fit`.
 
 ### Using Stan instead
 
@@ -62,18 +76,20 @@ MVMREx = mvmr_horse(data_mv_ex, n.burnin = 1000, n.iter = 1000, stan = TRUE, var
 MVMREx$MR_Estimate
 ```
 
+A fixed value can also be provided for tau, as with the unviariable mrhorse model.
+
 ### Sample overlap
 
 The base model assumes that the samples that the $\beta_{Xjk}$'s and $\beta_{Yj}$'s are estimated in are non-overlapping, meaning that they are completely separate sets of individuals, but from the same population. In practice, this is not the case, for example if UK Biobank data is used in both the outcome and exposure GWAS. The implications of sample overlap is that the $\beta_{Xjk}$'s and $\beta_{Yj}$'s are not independent, and need to be modelled jointly.
 
-We can supply a single value which will be used for all $\beta_{Xk}$-$\beta_Y$ and $\beta_{Xk}$-$\beta_{Xk}$ correlations, or we can provide the correlation matrix.
+We can supply a single value which will be used for all $\beta_{Xk}$-$\beta_Y$ and $\beta_{Xk}$-$\beta_{Xk}$ correlations, or we can provide the correlation matrix. It is assumed that these correlations are known, determined by the proportion of sample overlap and estimated, e.g., using LD Score regression.
 
 Single value:
 
 ```{r cache=TRUE}
-set.seed(100)
-MVMREx = mvmr_horse(data_mv_ex, n.burnin = 1000, n.iter = 1000, omega = 0.1)
-MVMREx$MR_Estimate
+# set.seed(20230531)
+# MVMREx = mvmr_horse(data_mv_ex, n.burnin = 1000, n.iter = 1000, omega = 0.4)
+# MVMREx$MR_Estimate
 ```
 
 Matrix: The matrix should contain omega values for $\beta_{Xk}$-$\beta_Y$ correlations in the first row and column, and then $\beta_{Xk}$-$\beta_{Xk}$ correlations in the rest. Note that each $\omega$ may take a different value.
@@ -90,7 +106,7 @@ $$
 \end{array}
 \right)\end{array}
 $$
-Here we have the the correlation parameter for $\beta_{Y}$ and $\beta_{X1}$, and $\beta_{Y}$ and $\beta_{X2}$ as 0.2, and the correlation between $\beta_{X1}$ and $\beta_{X2}$ as 0.5.
+Here for example we have the the correlation parameter for $\beta_{Y}$ and $\beta_{X1}$, and $\beta_{Y}$ and $\beta_{X2}$ as 0.2, and the correlation between $\beta_{X1}$ and $\beta_{X2}$ as 0.5.
 
 ```{r}
 omega_mat = matrix(c(1, 0.2, 0.2, 0.2, 1, 0.5, 0.2, 0.5, 1), 3,3)
@@ -99,7 +115,7 @@ omega_mat
 
 
 ```{r cache=TRUE}
-set.seed(100)
+set.seed(20230531)
 MVMREx = mvmr_horse(data_mv_ex, n.burnin = 1000, n.iter = 1000, omega = omega_mat)
 MVMREx$MR_Estimate
 ```
@@ -120,3 +136,5 @@ $$
 \right)\end{array}
 $$
 :::
+
+

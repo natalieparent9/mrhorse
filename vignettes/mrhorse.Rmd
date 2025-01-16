@@ -60,6 +60,8 @@ coda::traceplot(MREx$MR_Coda[, "theta"])
 coda::densplot(MREx$MR_Coda[, "theta"])
 ```
 
+The original model object can also be accessed by running mr_horse with the `return_fit` argument set to TRUE, by default it is not saved. When set to TRUE the JAGS or Stan model object is saved in `MR$Fit`.
+
 <br><br>
 
 ### Using Stan instead

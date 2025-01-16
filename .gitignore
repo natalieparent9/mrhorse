@@ -9,3 +9,4 @@ src/*.h
 inst/doc
 README_cache
 vignettes/mrhorse_cache
+vignettes/mvmrhorse_cache

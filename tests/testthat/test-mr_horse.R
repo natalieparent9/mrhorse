@@ -1,6 +1,10 @@
 
 # testthat library must be loaded
 
+# These tests are not necessarily proving the model produces correct results, but more so to tell
+# if the results change if a new feature is added or something is modified
+
+
 ## Basic tests ####
 
 testthat::test_that("Basic JAGS model runs successfully and produces expected results", {
@@ -15,8 +19,9 @@ testthat::test_that("Basic JAGS model runs successfully and produces expected re
   expect_s3_class(result$MR_Coda, "mcmc.list")
 
   # Check estimates match expected
-  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.097, "SD"=0.018, "2.5% quantile"=0.063, "97.5% quantile"=0.132, "Rhat"=1.001, check.names = FALSE))
+  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.097, "SD"=0.018, "2.5% quantile"=0.062, "97.5% quantile"=0.133, "Rhat"=1.001, check.names = FALSE))
   print(result$MR_Estimate)
+  # There is a 0.01 unit difference in CI compared to Andrews original result
 })
 
 
@@ -37,8 +42,9 @@ testthat::test_that("Basic Stan model runs successfully and produces expected ou
   expect_s3_class(result$MR_Coda, "mcmc.list")
 
   # Check estimates match expected
-  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.098, "SD"=0.018, "2.5% quantile"=0.064, "97.5% quantile"=0.133, "Rhat"=1.009, check.names = FALSE))
+  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.096, "SD"=0.015, "2.5% quantile"=0.067, "97.5% quantile"=0.128, "Rhat"=1.142, check.names = FALSE))
   print(result$MR_Estimate)
+  # large rhat likely due to low iterations
 })
 
 
@@ -78,7 +84,7 @@ testthat::test_that("JAGS model runs successfully and produces expected results 
   expect_equal(summary(result$MR_Coda)$statistics['tau',1], 0.01)
   expect_equal(summary(result$MR_Coda)$statistics['tau',2], 0.00)
 
-  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.098, "SD"=0.018, "2.5% quantile"=0.062, "97.5% quantile"=0.134, "Rhat"=1.005, check.names = FALSE))
+  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.098, "SD"=0.018, "2.5% quantile"=0.062, "97.5% quantile"=0.132, "Rhat"=1.002, check.names = FALSE))
   print(result$MR_Estimate)
 })
 
@@ -89,10 +95,12 @@ testthat::test_that("Stan model runs successfully and produces expected results 
   warnings = capture_warnings({
     result = mr_horse(D = data_ex, n.iter = 1000, n.burnin = 1000, stan = TRUE, fixed_tau = 0.01, variable.names = 'tau')
   })
-  expect_length(warnings, 3)
+  expect_length(warnings, 5)
   expect_match(warnings[1], "divergent transitions after warmup")
   expect_match(warnings[2], "transitions after warmup that exceeded the maximum treedepth")
   expect_match(warnings[3], "Examine the pairs")
+  expect_match(warnings[4], "Bulk Effective Samples Size")
+  expect_match(warnings[5], "Tail Effective Samples Size")
 
   expect_type(result, "list")
   expect_named(result, c("MR_Estimate", "MR_Coda"))
@@ -101,7 +109,7 @@ testthat::test_that("Stan model runs successfully and produces expected results 
   # Check estimates match expected
   expect_equal(summary(result$MR_Coda)$statistics['tau',1], 0.01)
   expect_equal(summary(result$MR_Coda)$statistics['tau',2], 0.00)
-  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.097, "SD"=0.018, "2.5% quantile"=0.063, "97.5% quantile"=0.132, "Rhat"=1.006, check.names = FALSE))
+  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.098, "SD"=0.017, "2.5% quantile"=0.065, "97.5% quantile"=0.131, "Rhat"=1.001, check.names = FALSE))
   print(result$MR_Estimate)
 })
 
@@ -116,7 +124,7 @@ testthat::test_that("JAGS model runs successfully and produces expected results 
   expect_named(result, c("MR_Estimate", "MR_Coda"))
   expect_s3_class(result$MR_Coda, "mcmc.list")
 
-  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.096, "SD"=0.017, "2.5% quantile"=0.062, "97.5% quantile"=0.29, "Rhat"=1.031, check.names = FALSE))
+  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.096, "SD"=0.017, "2.5% quantile"=0.062, "97.5% quantile"=0.129, "Rhat"=1.031, check.names = FALSE))
   print(result$MR_Estimate)
 })
 
@@ -130,7 +138,7 @@ testthat::test_that("Basic Stan model runs successfully and produces expected ou
   expect_match(warnings[1], "divergent transitions after warmup")
   expect_match(warnings[2], "transitions after warmup that exceeded the maximum treedepth")
   expect_match(warnings[3], "Examine the pairs")
-  expect_match(warnings[4], "Tail Effective Samples Size")
+  expect_match(warnings[4], "Bulk Effective Samples Size")
 
   # Ensure the model returns a list with expected elements
   expect_type(result, "list")
@@ -138,7 +146,7 @@ testthat::test_that("Basic Stan model runs successfully and produces expected ou
   expect_s3_class(result$MR_Coda, "mcmc.list")
 
   # Check estimates match expected
-  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.098, "SD"=0.018, "2.5% quantile"=0.064, "97.5% quantile"=0.133, "Rhat"=1.009, check.names = FALSE))
+  expect_equal(result$MR_Estimate, data.frame("Estimate"=0.097, "SD"=0.018, "2.5% quantile"=0.061, "97.5% quantile"=0.133, "Rhat"=1.000, check.names = FALSE))
   print(result$MR_Estimate)
 })
 

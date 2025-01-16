@@ -11,7 +11,7 @@ mr_horse_model_jags = function() {
       obs[i, ] ~ dmnorm.vcov(mu[i,], V[,,i])         # Jointly model bx and by likelihood, .vcov specifies we have provided var covar matrix instead of precision
 
       bx0[i] ~ dnorm(mx0 + (sqrt(vx0)/(tau * phi[i])) * rho[i] * alpha[i], 1 / ((1 - rho[i]^2) * vx0)) # Effect of the variant on the exposure
-      r[i] ~ dbeta(10, 10);T(0, 1)                   # Will be scaled to correlation between alpha and bx0
+      r[i] ~ dbeta(10, 10);T(0, 1)                   # Will be scaled to correlation between alpha and bx0 - Note changed this from (-1,1) as beta cannot be below 0
       rho[i] = 2*r[i] -1                             # Converts the truncated beta distribution parameter r[i] to a correlation parameter rho[i].
 
       alpha[i] ~ dnorm(0, 1 / (tau * tau * phi[i] * phi[i]))  # Pleiotropic effects
@@ -58,32 +58,31 @@ mr_horse_model_jags = function() {
 #'
 #' @examples
 #' # Fit model with JAGS
-#' # data(data_ex)
-#' # MREx = mr_horse(data_ex, n.burnin = 1000, n.iter = 2000)
+#' MREx = mr_horse(data_ex, n.burnin = 1000, n.iter = 2000)
 #'
 #' # Check estimates
-#' # MREx$MR_Estimate
+#' MREx$MR_Estimate
 #'
 #' # Fit model with Stan
-#' # MREx = mr_horse(data_ex, n.warmup = 1000, n.iter = 2000, stan = TRUE)
+#' MREx = mr_horse(data_ex, n.warmup = 1000, n.iter = 2000, stan = TRUE)
 #'
 #' # Save samples for tau parameter (in addition to theta)
-#' # MREx = mr_horse(data_ex, n.warmup = 1000, n.iter = 2000, variable.names = 'tau')
-#' # summary(MREx$MR_Coda)
+#' MREx = mr_horse(data_ex, n.warmup = 1000, n.iter = 2000, variable.names = 'tau')
+#' summary(MREx$MR_Coda)
 #'
 #' # View diagnostic plots (trace and density)
-#' # plot(MREx$MR_Coda[,c('theta','tau')])
+#' plot(MREx$MR_Coda[,c('theta','tau')])
 #'
 mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n.burnin = 10000,
                     stan = FALSE, n.cores = parallelly::availableCores(), return_fit = FALSE, fixed_tau = -1, omega = 0){
-
-  J = nrow(D) # Number of genetic instruments
 
   # Validate data input, accepts data frame, data table, tibble or MRInput object (does not require conversion)
   if (!(is.data.frame(D) | inherits(D, "MRInput"))) stop("Error: D must be a data frame or an MRInput object")
 
   # Convert MRInput to data frame
   if (inherits(D, "MRInput")) D = data.frame(betaX = D@betaX, betaY = D@betaY, betaXse = D@betaXse, betaYse = D@betaYse)
+
+  J = nrow(D) # Number of genetic instruments
 
   # Check variables and arguments
   vars = c('betaX', 'betaY', 'betaXse', 'betaYse')
