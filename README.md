@@ -29,31 +29,12 @@ You can install the development version of mrhorse from
 [GitHub](https://github.com/) with:
 
 ``` r
-library(devtools)
-devtools::install_github("natalieparent9/mrhorse")
-#> 
-#> ── R CMD build ─────────────────────────────────────────────────────────────────
-#>      checking for file ‘/private/var/folders/6p/3_l0pbvj53lbsc774mttyysr0000gn/T/RtmpjwlRUF/remotes11152523bd813/natalieparent9-mrhorse-63191e6/DESCRIPTION’ ...  ✔  checking for file ‘/private/var/folders/6p/3_l0pbvj53lbsc774mttyysr0000gn/T/RtmpjwlRUF/remotes11152523bd813/natalieparent9-mrhorse-63191e6/DESCRIPTION’
-#>   ─  preparing ‘mrhorse’:
-#>      checking DESCRIPTION meta-information ...  ✔  checking DESCRIPTION meta-information
-#>   ─  cleaning src
-#>   ─  checking for LF line-endings in source and make files and shell scripts
-#>   ─  checking for empty or unneeded directories
-#>        NB: this package now depends on R (>= 3.5.0)
-#>        WARNING: Added dependency on R >= 3.5.0 because serialized objects in
-#>      serialize/load version 3 cannot be read in older versions of R.
-#>      File(s) containing such objects:
-#>        ‘mrhorse/README_cache/gfm/unnamed-chunk-3_fc0074dc90533e48417417587eb05da2.RData’
-#>        ‘mrhorse/README_cache/gfm/unnamed-chunk-3_fc0074dc90533e48417417587eb05da2.rdx’
-#>        ‘mrhorse/README_cache/gfm/unnamed-chunk-4_06618c0614294ee3282d94231388fd59.RData’
-#>        ‘mrhorse/README_cache/gfm/unnamed-chunk-4_06618c0614294ee3282d94231388fd59.rdx’
-#>        ‘mrhorse/README_cache/gfm/unnamed-chunk-5_cec2b9a5f79319fa17e2a46445c4d61e.RData’
-#>        ‘mrhorse/README_cache/gfm/unnamed-chunk-5_cec2b9a5f79319fa17e2a46445c4d61e.rdx’
-#>   ─  building ‘mrhorse_0.0.0.9000.tar.gz’
-#>      
-#> 
+library(remotes)
+remotes::install_github("natalieparent9/mrhorse", quiet = T)
 library(mrhorse)
 ```
+
+Note this may take several minutes.
 
 ## Implementation
 

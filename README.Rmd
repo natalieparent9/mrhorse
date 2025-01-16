@@ -25,11 +25,12 @@ In order to run the code, [JAGS](https://sourceforge.net/projects/mcmc-jags/) fi
 
 You can install the development version of mrhorse from [GitHub](https://github.com/) with:
 
-```{r message=FALSE, warning=FALSE}
-library(devtools)
-devtools::install_github("natalieparent9/mrhorse")
+```{r message=FALSE, warning=FALSE, results='hide'}
+library(remotes)
+remotes::install_github("natalieparent9/mrhorse", quiet = T)
 library(mrhorse)
 ```
+Note this may take several minutes.
 
 ## Implementation
 
