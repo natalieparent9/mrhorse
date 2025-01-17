@@ -98,7 +98,7 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
     omega = matrix(omega, nrow=K+1, ncol=K+1)
     diag(omega) = 1
   }
-  print(omega)
+
   # Create covariance matrix V
   V = array(0, c(K+1,K+1,J))
   for (i in 1:J) {

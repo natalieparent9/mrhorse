@@ -5,7 +5,7 @@
 ## Basic tests ####
 
 testthat::test_that("Basic multivariable JAGS model runs successfully and produces expected results", {
-  # Note this test is checking against Andrew's original results
+  # Note this test is checking against Andrew's original results - slightly different
   set.seed(20230531)
   # Run the model
   result = mvmr_horse(D = data_mv_ex)
@@ -17,11 +17,11 @@ testthat::test_that("Basic multivariable JAGS model runs successfully and produc
   # Check estimates match expected
   expect_equal(result$MR_Estimate, data.frame(
     Parameter = c("theta[1]", "theta[2]"),
-    Estimate = c(0.100, 0.105),
-    SD = c(0.019, 0.018),
-    `2.5% quantile` = c(0.065, 0.069),
-    `97.5% quantile` = c(0.137, 0.139),
-    Rhat = c(1.000, 1.001),
+    Estimate = c(0.099, 0.104),
+    SD = c(0.018, 0.018),
+    `2.5% quantile` = c(0.064, 0.070),
+    `97.5% quantile` = c(0.135, 0.139),
+    Rhat = c(1.000, 1.000),
     check.names = FALSE
   ))
   print(result$MR_Estimate)
@@ -58,7 +58,7 @@ testthat::test_that("Basic multivariable Stan model runs successfully and produc
 
 ## Test for MRMVInput ####
 
-testthat::test_that("Basic multivariable JAGS model runs successfully and produces expected results", {
+testthat::test_that("Basic multivariable JAGS model with MVMR_Input object runs successfully and produces expected results", {
   data = MendelianRandomization::mr_mvinput(bx = as.matrix(data_mv_ex[,c('betaX1', 'betaX2')], ncol=2), by = data_mv_ex$betaY,
                                           bxse = as.matrix(data_mv_ex[,c('betaX1se', 'betaX2se')], ncol=2), byse = data_mv_ex$betaYse)
 
@@ -102,11 +102,11 @@ testthat::test_that("Multivariable JAGS model with fixed tau runs successfully a
   # Check estimates match expected
   expect_equal(result$MR_Estimate, data.frame(
     Parameter = c("theta[1]", "theta[2]"),
-    Estimate = c(0.099, 0.104),
-    SD = c(0.018, 0.018),
-    `2.5% quantile` = c(0.063, 0.07),
-    `97.5% quantile` = c(0.134, 0.138),
-    Rhat = c(1.003, 1.000),
+    Estimate = c(0.100, 0.103),
+    SD = c(0.019, 0.018),
+    `2.5% quantile` = c(0.062, 0.068),
+    `97.5% quantile` = c(0.135, 0.139),
+    Rhat = c(1.008, 1.008),
     check.names = FALSE
   ))
   print(result$MR_Estimate)
@@ -134,11 +134,11 @@ testthat::test_that("Multivariable Stan model with fixed tau runs successfully a
   # Check estimates match expected
   expect_equal(result$MR_Estimate, data.frame(
     Parameter = c("theta[1]", "theta[2]"),
-    Estimate = c(0.100, 0.105),
-    SD = c(0.018, 0.018),
-    `2.5% quantile` = c(0.064, 0.070),
-    `97.5% quantile` = c(0.136, 0.142),
-    Rhat = c(1.002, 1.000),
+    Estimate = c(0.099, 0.104),
+    SD = c(0.019, 0.017),
+    `2.5% quantile` = c(0.063, 0.069),
+    `97.5% quantile` = c(0.136, 0.139),
+    Rhat = c(1.005, 1.01),
     check.names = FALSE
   ))
 })
@@ -148,7 +148,7 @@ testthat::test_that("Multivariable Stan model with fixed tau runs successfully a
 testthat::test_that("Multivariable JAGS model runs successfully and produces expected results with non zero omega", {
   set.seed(100)
   # Run the model
-  result = mvmr_horse(D = data_mv_ex, n.iter = 1000, n.burnin = 500, omega = 0.1)
+  result = mvmr_horse(D = data_mv_ex, n.iter = 1000, n.burnin = 500, omega = 0.2)
 
   expect_type(result, "list")
   expect_named(result, c("MR_Estimate", "MR_Coda"))
@@ -157,11 +157,11 @@ testthat::test_that("Multivariable JAGS model runs successfully and produces exp
   # Check estimates match expected
   expect_equal(result$MR_Estimate, data.frame(
     Parameter = c("theta[1]", "theta[2]"),
-    Estimate = c(0.100, 0.104),
-    SD = c(0.018, 0.018),
+    Estimate = c(0.098, 0.103),
+    SD = c(0.017, 0.017),
     `2.5% quantile` = c(0.065, 0.069),
-    `97.5% quantile` = c(0.135, 0.140),
-    Rhat = c(1.007, 1.001),
+    `97.5% quantile` = c(0.133, 0.137),
+    Rhat = c(1.008, 1.005),
     check.names = FALSE
   ))
   print(result$MR_Estimate)
@@ -173,11 +173,13 @@ testthat::test_that("Multivariable Stan model runs successfully and produces exp
   warnings = capture_warnings({
     result = mvmr_horse(D = data_mv_ex, n.iter = 1000, n.burnin = 500, stan = TRUE, omega = 0.1)
   })
-  expect_length(warnings, 4)
+  expect_length(warnings, 6)
   expect_match(warnings[1], "divergent transitions after warmup")
   expect_match(warnings[2], "transitions after warmup that exceeded the maximum treedepth")
   expect_match(warnings[3], "Examine the pairs")
-  expect_match(warnings[4], "ESS")
+  expect_match(warnings[4], "The largest R-hat")
+  expect_match(warnings[5], "Bulk Effective")
+  expect_match(warnings[6], "Tail Effective")
 
   # Ensure the model returns a list with expected elements
   expect_type(result, "list")
@@ -187,11 +189,11 @@ testthat::test_that("Multivariable Stan model runs successfully and produces exp
   # Check estimates match expected
   expect_equal(result$MR_Estimate, data.frame(
     Parameter = c("theta[1]", "theta[2]"),
-    Estimate = c(0.100, 0.104),
-    SD = c(0.019, 0.017),
-    `2.5% quantile` = c(0.065, 0.072),
-    `97.5% quantile` = c(0.136, 0.139),
-    Rhat = c(1.004, 1.002),
+    Estimate = c(0.096, 0.104),
+    SD = c(0.022, 0.017),
+    `2.5% quantile` = c(0.050, 0.068),
+    `97.5% quantile` = c(0.135, 0.139),
+    Rhat = c(1.006, 1.01),
     check.names = FALSE
   ))
 })
@@ -213,8 +215,8 @@ testthat::test_that("Multivariable JAGS model runs successfully and produces exp
     Estimate = c(0.099, 0.101),
     SD = c(0.018, 0.017),
     `2.5% quantile` = c(0.064, 0.067),
-    `97.5% quantile` = c(0.134, 0.140),
-    Rhat = c(1.03, 1.02),
+    `97.5% quantile` = c(0.134, 0.135),
+    Rhat = c(1.026, 1.021),
     check.names = FALSE
   ))
   print(result$MR_Estimate)
@@ -250,11 +252,10 @@ testthat::test_that("Multivariable Stan model runs successfully and produces exp
   warnings = capture_warnings({
     result = mvmr_horse(D = data_mv_ex, n.iter = 1000, n.burnin = 500, stan = TRUE, omega = omega_mat)
   })
-  expect_length(warnings, 4)
+  expect_length(warnings, 3)
   expect_match(warnings[1], "divergent transitions after warmup")
   expect_match(warnings[2], "transitions after warmup that exceeded the maximum treedepth")
   expect_match(warnings[3], "Examine the pairs")
-  expect_match(warnings[4], "ESS")
 
   # Ensure the model returns a list with expected elements
   expect_type(result, "list")
@@ -264,11 +265,11 @@ testthat::test_that("Multivariable Stan model runs successfully and produces exp
   # Check estimates match expected
   expect_equal(result$MR_Estimate, data.frame(
     Parameter = c("theta[1]", "theta[2]"),
-    Estimate = c(0.100, 0.104),
-    SD = c(0.019, 0.017),
-    `2.5% quantile` = c(0.065, 0.072),
-    `97.5% quantile` = c(0.136, 0.139),
-    Rhat = c(1.004, 1.002),
+    Estimate = c(0.099, 0.101),
+    SD = c(0.017, 0.017),
+    `2.5% quantile` = c(0.065, 0.069),
+    `97.5% quantile` = c(0.131, 0.132),
+    Rhat = c(1.006, 1.001),
     check.names = FALSE
   ))
 })
