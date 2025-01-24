@@ -9,7 +9,7 @@ mvmr_horse_model_jags = function() {
     }
     mu[i, K+1] = inprod(bx0[i, 1:K], theta) + alpha[i]              # Expected mean of by
 
-    obs[i,] ~ dmnorm.vcov(mu[i,], V[,,i])                           # Jointly model bxs and by
+    obs[i,] ~ dmnorm(mu[i,], V[,,i])                                # Jointly model bxs and by
 
     kappa[i] = (rho[i]^2 / (1 + K*rho[i]^2))                        # Used to adjust bx0
     bx0[i,1:K] ~ dmnorm(mx + sx0 * rho[i] * alpha[i] / (phi[i] * tau), A - kappa[i] * B) # Latent effect of the variants on the exposures
@@ -101,9 +101,11 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
 
   # Create covariance matrix V
   V = array(0, c(K+1,K+1,J))
+  P = array(0, c(K+1,K+1,J))
   for (i in 1:J) {
     S = diag(D[i, c(sprintf("betaX%ise", 1:K), 'betaYse')], nrow = K+1, ncol=K+1)
     V[,,i] = S %*% omega %*% S
+    P[,,i] = solve(V[,,i])                               # Precision matrix, for JAGS
   }
   l = list()
   for (i in 1:J) l[[i]]= V[,,i]                          # Stan requires NxK+1xK+1 format rather than NxK+1xK+1
@@ -112,7 +114,7 @@ mvmr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000,
   variable.names = unique(c("theta", variable.names))
 
   data_list = list(obs = as.matrix(D[, c(sprintf("betaX%i", 1:K), 'betaY')], ncol=2), # Observed bx and by
-                   V = if (stan == TRUE) l else V,        # Covariance matrix of betaX and betaY
+                   V = if (stan == TRUE) l else P,        # Covariance matrix of betaX and betaY
                    J = J,                                 # Number of genetic instruments
                    K = K,                                 # Number of exposures
                    R = diag(K),

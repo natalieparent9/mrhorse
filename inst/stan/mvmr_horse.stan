@@ -1,13 +1,13 @@
 
 // After this filed is modified, it needs to be recompiled.
-// Triggering recompilation can be inconsistent, first try Run devtools::load_all(), rstantools::rstan_config(), pkgbuild::compile_dll()
+// Triggering recompilation can be inconsistent, first try Run rstantools::rstan_config() and devtools::load_all(), can try pkgbuild::compile_dll()
 // In src folder the stanExports_mvmr_horse.o / .h file should be updated
 
 data {
     int<lower=1> J;                    // Number of variants (rows)
     int<lower=1> K;                    // Number of exposures
     matrix[J,K+1] obs;                 // Observed bx and by
-    matrix[K+1,K+1] V[J];              // Variance covariance matrix for bxs & by
+    array[J] matrix[K+1, K+1] V;       // Variance covariance matrix for bxs & by
     matrix[K, K] R;                    // Prior precision matrix for mx, identity
     real<lower=-1> fixed_tau;          // Fixed tau value
 }

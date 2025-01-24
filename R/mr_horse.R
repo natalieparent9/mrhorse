@@ -8,7 +8,7 @@ mr_horse_model_jags = function() {
       mu[i, 1] = bx0[i]                              # Expected mean of bx distribution
       mu[i, 2] = theta * bx0[i] + alpha[i]           # Expected mean of by distribution
 
-      obs[i, ] ~ dmnorm.vcov(mu[i,], V[,,i])         # Jointly model bx and by likelihood, .vcov specifies we have provided var covar matrix instead of precision
+      obs[i, ] ~ dmnorm(mu[i,], V[,,i])              # Jointly model bx and by likelihood
 
       bx0[i] ~ dnorm(mx0 + (sqrt(vx0)/(tau * phi[i])) * rho[i] * alpha[i], 1 / ((1 - rho[i]^2) * vx0)) # Effect of the variant on the exposure
       r[i] ~ dbeta(10, 10);T(0, 1)                   # Will be scaled to correlation between alpha and bx0 - Note changed this from (-1,1) as beta cannot be below 0
@@ -96,9 +96,11 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
   # Create covariance matrix V
   R = matrix(c(1, omega, omega, 1), nrow=2,ncol=2)      # R matrix with omega on off diagonals, default is identity
   V = array(0, c(2,2,J))
+  P = array(0, c(2,2,J))
   for (i in 1:J) {
     S = diag(D[i, c('betaXse', 'betaYse')], nrow = 2, ncol=2)
     V[,,i] = S %*% R %*% S
+    P[,,i] = solve(V[,,i])                               # Precision matrix, for JAGS
   }
   l = list()
   for (i in 1:J) l[[i]]= V[,,i]                          # Stan requires Nx2x2 format rather than 2x2xN
@@ -106,7 +108,7 @@ mr_horse = function(D, n.chains = 3, variable.names = "theta", n.iter = 10000, n
   data_list = list(
     J = J,                                               # Number of genetic instruments
     obs = as.matrix(D[,c('betaX','betaY')],ncol=2),      # Observed bx and by
-    V = if (stan == TRUE) l else V,                      # Covariance matrix of betaX and betaY
+    V = if (stan == TRUE) l else P,                      # Covariance matrix of betaX and betaY
     fixed_tau = fixed_tau                                # Fixed tau value - default -1
   )
 

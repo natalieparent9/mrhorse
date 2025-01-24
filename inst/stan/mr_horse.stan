@@ -1,11 +1,11 @@
 // After this filed is modified, it needs to be recompiled.
-// Triggering recompilation can be inconsistent, first try Run devtools::load_all(), rstantools::rstan_config(), pkgbuild::compile_dll()// In src folder the stanExports_mr_horse.o file should be updated
+// Triggering recompilation can be inconsistent, first try Run rstantools::rstan_config() and devtools::load_all(), if not then pkgbuild::compile_dll()// In src folder the stanExports_mr_horse.o file should be updated
 // Note: normal() expects sd and multi_normal expects covar matrix with variance
 
 data {
   int<lower=0> J;                 // Number of variants (rows)
   matrix[J,2] obs;                // Observed bx and by
-  matrix[2,2] V[J];               // Variance covariance matrix for bx by
+  array[J] matrix[2, 2] V;        // Variance covariance matrix for bx by
   real<lower=-1> fixed_tau;       // Fixed tau value
 }
 
